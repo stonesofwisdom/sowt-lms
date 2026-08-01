@@ -1,0 +1,13 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap');
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body { margin: 0; font-family: 'Poppins', ui-sans-serif, system-ui, -apple-system, sans-serif; background: #F7F8FA; color: #151626; }
+button, input, textarea, select { font-family: inherit; }
+.btn { transition: transform .05s ease, filter .15s ease; }
+.btn:active { transform: translateY(1px); }
+.btn:hover { filter: brightness(1.05); }
+.fade-in { animation: fade .3s ease both; }
+@keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.lift { transition: transform .15s ease, box-shadow .15s ease; }
+.lift:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(20,20,20,.08); }
+@media (prefers-reduced-motion: reduce) { .fade-in, .lift { animation: none; transition: none; } }
