@@ -10,6 +10,7 @@ create table if not exists public.profiles (
   email text,
   full_name text,
   whatsapp_number text,
+  form_done boolean default false,
   role text not null default 'tutor' check (role in ('tutor','facilitator','admin')),
   status text not null default 'pending' check (status in ('pending','enrolled','revoked')),
   created_at timestamptz default now()

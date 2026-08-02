@@ -2,11 +2,15 @@ import React, { useEffect, useState } from "react";
 import Shell from "./Shell.jsx";
 import { Header, Loading, Spinner } from "../components/ui.jsx";
 import { C } from "../theme";
-import { fetchCourse, fetchMySubs, submitAnswer, fetchAnnouncements } from "../db";
+import { fetchCourse, fetchMySubs, submitAnswer, fetchAnnouncements, updateProfile } from "../db";
 import { ai, feedbackPrompt } from "../ai";
 import { Home as HomeIcon, BookOpen, ClipboardCheck, MessageSquare, Play, Lock, Sparkles, ArrowLeft, Megaphone, Check, CheckCircle2, Circle, Target } from "lucide-react";
 
+const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSczqV9nPfucbPDmd9t_8YBhszF1BQbz9CE__IGDBH_Yrdj-rA/viewform?embedded=true";
+
 export default function TutorApp({ profile, onSignOut }) {
+  const [showForm, setShowForm] = useState(!profile.form_done);
+  async function finishForm() { setShowForm(false); try { await updateProfile(profile.id, { form_done: true }); } catch (e) {} }
   const [tab, setTab] = useState("home");
   const [sessions, setSessions] = useState([]);
   const [subs, setSubs] = useState({});
@@ -40,6 +44,23 @@ export default function TutorApp({ profile, onSignOut }) {
   }
 
   return (
+    <>
+      {showForm && (
+        <div className="fixed inset-0 z-50 grid place-items-center p-4" style={{ background: "rgba(20,22,38,.6)" }}>
+          <div className="w-full max-w-2xl rounded-3xl overflow-hidden" style={{ background: C.card }}>
+            <div className="p-5" style={{ borderBottom: `1px solid ${C.line}` }}>
+              <div className="text-xs font-bold uppercase tracking-widest" style={{ color: C.blue }}>Quick 2-minute form</div>
+              <div className="font-black text-lg">Welcome — tell us about you</div>
+              <div className="text-sm" style={{ color: C.muted }}>This helps us teach at exactly your level. Please complete it to continue.</div>
+            </div>
+            <iframe title="Pre-Course Form" src={FORM_URL} className="w-full" style={{ height: 460, border: "none" }} />
+            <div className="p-4 flex items-center justify-between gap-3" style={{ borderTop: `1px solid ${C.line}` }}>
+              <div className="text-xs" style={{ color: C.muted }}>Fill it in above, then continue.</div>
+              <button onClick={finishForm} className="btn rounded-2xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.blue }}>I've completed it — continue</button>
+            </div>
+          </div>
+        </div>
+      )}
     <Shell roleLabel="Tutor" roleColor={C.blue} nav={nav} tab={tab} setTab={(t) => { setTab(t); setLesson(null); }} profile={profile} onSignOut={onSignOut}>
       {loading ? <Loading /> : (<>
         {tab === "home" && <TutorHome profile={profile} pct={pct} completed={completed} total={total} next={sessions.find((s) => !s.assignments.every((a) => subs[a.id]))} setTab={setTab} />}
@@ -49,6 +70,7 @@ export default function TutorApp({ profile, onSignOut }) {
         {tab === "community" && <AnnouncementsList ann={ann} />}
       </>)}
     </Shell>
+    </>
   );
 }
 
