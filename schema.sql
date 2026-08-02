@@ -185,3 +185,16 @@ create policy att_del on public.attendance for delete using (public.is_staff());
 
 alter table public.profiles add column if not exists certificate_code text;
 alter table public.profiles add column if not exists certificate_name text;
+
+-- Certificate admin override
+alter table public.profiles add column if not exists certificate_unlocked boolean default false;
+create or replace function public.guard_profile_update()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is not null and not exists (select 1 from public.profiles where id = auth.uid() and role = 'admin') then
+    new.role := old.role;
+    new.status := old.status;
+    new.certificate_unlocked := old.certificate_unlocked;
+  end if;
+  return new;
+end; $$;

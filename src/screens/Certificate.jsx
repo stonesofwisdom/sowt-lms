@@ -6,7 +6,7 @@ import { ai } from "../ai";
 import { Lock, Award, Download, Linkedin, Check } from "lucide-react";
 
 export default function Certificate({ profile, total, completed, attended }) {
-  const eligible = total > 0 && completed >= total && attended >= total;
+  const eligible = profile.certificate_unlocked || (total > 0 && completed >= total && attended >= total);
   const [name, setName] = useState(profile.certificate_name || profile.full_name || "");
   const [code, setCode] = useState(profile.certificate_code || "");
   const [line, setLine] = useState("");

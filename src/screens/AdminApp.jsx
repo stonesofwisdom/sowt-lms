@@ -50,6 +50,7 @@ function Members() {
             {r.status === "enrolled"
               ? <button onClick={() => set(r.id, { status: "revoked" })} className="btn inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold" style={{ background: C.card, border: `1px solid ${C.line}` }}><X size={13} /> Revoke</button>
               : <button onClick={() => set(r.id, { status: "enrolled" })} className="btn inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold text-white" style={{ background: C.green }}><Check size={13} /> Enrol</button>}
+            <button onClick={() => set(r.id, { certificate_unlocked: !r.certificate_unlocked })} className="btn inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold" style={r.certificate_unlocked ? { background: "#E6F5EE", color: C.green } : { background: C.bg, color: C.muted, border: `1px solid ${C.line}` }}>{r.certificate_unlocked ? "Cert unlocked" : "Unlock cert"}</button>
           </div>
         ))}
         {shown.length === 0 && <div className="px-5 py-8 text-center text-sm" style={{ color: C.muted }}>No members yet.</div>}
@@ -83,6 +84,7 @@ function Content() {
         <div className="text-xs font-bold uppercase tracking-widest" style={{ color: C.red }}>Sessions ({sessions.length})</div>
         <button onClick={newSession} className="btn inline-flex items-center gap-1.5 rounded-2xl px-4 py-2 text-sm font-bold text-white" style={{ background: C.blue }}><Plus size={15} /> Add session</button>
       </div>
+      <datalist id="faclist">{["SOWT Faculty", ...facs].map((n) => <option key={n} value={n} />)}</datalist>
       <div className="mt-3 space-y-3">
         {sessions.map((s) => (
           <div key={s.id} className="rounded-3xl p-4" style={{ background: C.card, border: `1px solid ${C.line}` }}>
@@ -95,7 +97,7 @@ function Content() {
               <div className="flex flex-wrap gap-2">
                 <input value={s.week || ""} onChange={(e) => edit(s.id, { week: e.target.value })} placeholder="Week" className="rounded-xl px-3 py-2 text-sm font-bold w-24" style={inp} />
                 <input value={s.theme || ""} onChange={(e) => edit(s.id, { theme: e.target.value })} placeholder="Theme" className="rounded-xl px-3 py-2 text-sm flex-1 min-w-[140px]" style={inp} />
-                <select value={s.facilitator || "SOWT Faculty"} onChange={(e) => edit(s.id, { facilitator: e.target.value })} className="rounded-xl px-3 py-2 text-sm font-semibold" style={inp}>{["SOWT Faculty", ...facs, ...(s.facilitator && s.facilitator !== "SOWT Faculty" && !facs.includes(s.facilitator) ? [s.facilitator] : [])].map((n) => <option key={n} value={n}>{n}</option>)}</select>
+                <input list="faclist" value={s.facilitator || ""} onChange={(e) => edit(s.id, { facilitator: e.target.value })} placeholder="Facilitator name" className="rounded-xl px-3 py-2 text-sm font-semibold min-w-[150px]" style={inp} />
                 <input value={s.session_date || ""} onChange={(e) => edit(s.id, { session_date: e.target.value })} placeholder="Date" className="rounded-xl px-3 py-2 text-sm w-28" style={inp} />
               </div>
               <input value={s.title || ""} onChange={(e) => edit(s.id, { title: e.target.value })} placeholder="Session title" className="rounded-xl px-3 py-2 text-sm font-bold" style={inp} />

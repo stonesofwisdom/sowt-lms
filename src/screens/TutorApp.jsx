@@ -127,12 +127,13 @@ function Modules({ sessions, subs, open }) {
               {sessions.filter((s) => s.week === wk).map((s) => {
                 const done = s.assignments.length > 0 && s.assignments.every((a) => subs[a.id]);
                 const locked = !s.is_open;
+                const Tag = locked ? "div" : "button";
                 return (
-                  <button key={s.id} onClick={() => open(s.id)} className="lift w-full flex items-center gap-4 rounded-2xl p-4 text-left" style={{ background: C.card, border: `1px solid ${C.line}`, borderLeft: `5px solid ${locked ? "#D7D2C4" : col}`, opacity: locked ? 0.92 : 1 }}>
+                  <Tag key={s.id} onClick={locked ? undefined : () => open(s.id)} className={(locked ? "" : "lift ") + "w-full flex items-center gap-4 rounded-2xl p-4 text-left"} style={{ background: C.card, border: `1px solid ${C.line}`, borderLeft: `5px solid ${locked ? "#D7D2C4" : col}`, opacity: locked ? 0.85 : 1, cursor: locked ? "default" : "pointer" }}>
                     <span>{locked ? <Lock size={24} color="#B9B4A5" /> : done ? <CheckCircle2 size={26} color={col} /> : <Circle size={26} color="#CFCABA" />}</span>
-                    <span className="min-w-0 flex-1"><span className="block text-[11px] font-bold uppercase tracking-wide" style={{ color: C.muted }}>{s.title ? `Session` : ""} {s.sort}{locked ? " · Locked" : ""}</span><span className="block font-bold leading-snug">{s.title}</span></span>
-                    <span className="ml-auto text-xs font-bold" style={{ color: locked ? C.muted : col }}>{locked ? "Preview" : "Open"}</span>
-                  </button>
+                    <span className="min-w-0 flex-1"><span className="block text-[11px] font-bold uppercase tracking-wide" style={{ color: C.muted }}>Session {s.sort}{locked ? " · Locked" : ""}</span><span className="block font-bold leading-snug">{s.title}</span></span>
+                    <span className="ml-auto text-xs font-bold" style={{ color: locked ? C.muted : col }}>{locked ? "Opens after live class" : "Open"}</span>
+                  </Tag>
                 );
               })}
             </div>
@@ -219,12 +220,12 @@ function TutorAssignments({ sessions, subs, open }) {
       <Header eyebrow="Track your work" title="Assignments" />
       <div className="mt-8 space-y-3">
         {rows.length === 0 && <div className="text-sm" style={{ color: C.muted }}>No assignments yet.</div>}
-        {rows.map(({ s, a }) => { const done = !!subs[a.id]; const locked = !s.is_open || !s.assignments_active; return (
-          <button key={a.id} onClick={() => open(s.id)} className="lift w-full flex items-center gap-4 rounded-2xl p-4 text-left" style={{ background: C.card, border: `1px solid ${C.line}` }}>
+        {rows.map(({ s, a }) => { const done = !!subs[a.id]; const moduleLocked = !s.is_open; const locked = !s.is_open || !s.assignments_active; const Tag = moduleLocked ? "div" : "button"; return (
+          <Tag key={a.id} onClick={moduleLocked ? undefined : () => open(s.id)} className={(moduleLocked ? "" : "lift ") + "w-full flex items-center gap-4 rounded-2xl p-4 text-left"} style={{ background: C.card, border: `1px solid ${C.line}`, cursor: moduleLocked ? "default" : "pointer" }}>
             <span className="grid place-items-center h-9 w-9 rounded-xl shrink-0" style={{ background: done ? C.blue : locked ? "#EDEAE0" : C.yellow }}>{done ? <Check size={18} color="#fff" /> : locked ? <Lock size={15} color="#9A947F" /> : <ClipboardCheck size={18} color={C.ink} />}</span>
             <span className="min-w-0 flex-1"><span className="block text-[11px] font-bold uppercase tracking-wide" style={{ color: C.muted }}>Session {s.sort}</span><span className="block font-bold leading-snug">{locked && !done ? "Locked" : a.title}</span></span>
             <span className="ml-auto text-xs font-bold" style={{ color: done ? C.blue : locked ? C.muted : C.red }}>{done ? "Submitted" : locked ? "Locked" : "To do"}</span>
-          </button>
+          </Tag>
         ); })}
       </div>
     </div>
