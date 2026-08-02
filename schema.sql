@@ -9,6 +9,7 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text,
   full_name text,
+  whatsapp_number text,
   role text not null default 'tutor' check (role in ('tutor','facilitator','admin')),
   status text not null default 'pending' check (status in ('pending','enrolled','revoked')),
   created_at timestamptz default now()
@@ -18,8 +19,8 @@ create table if not exists public.profiles (
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  insert into public.profiles (id, email, full_name)
-  values (new.id, new.email, coalesce(new.raw_user_meta_data->>'full_name',''))
+  insert into public.profiles (id, email, full_name, whatsapp_number)
+  values (new.id, new.email, coalesce(new.raw_user_meta_data->>'full_name',''), coalesce(new.raw_user_meta_data->>'whatsapp',''))
   on conflict (id) do nothing;
   return new;
 end; $$;
@@ -31,7 +32,7 @@ create trigger on_auth_user_created
 create or replace function public.guard_profile_update()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  if not exists (select 1 from public.profiles where id = auth.uid() and role = 'admin') then
+  if auth.uid() is not null and not exists (select 1 from public.profiles where id = auth.uid() and role = 'admin') then
     new.role := old.role;
     new.status := old.status;
   end if;

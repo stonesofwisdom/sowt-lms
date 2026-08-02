@@ -5,7 +5,7 @@ import { C } from "../theme";
 
 export default function Auth() {
   const [mode, setMode] = useState("signin");
-  const [name, setName] = useState(""); const [email, setEmail] = useState(""); const [pw, setPw] = useState("");
+  const [name, setName] = useState(""); const [wa, setWa] = useState(""); const [email, setEmail] = useState(""); const [pw, setPw] = useState("");
   const [msg, setMsg] = useState(""); const [busy, setBusy] = useState(false);
   const inp = { background: C.bg, border: `1px solid ${C.line}` };
 
@@ -13,7 +13,7 @@ export default function Auth() {
     setMsg(""); setBusy(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({ email, password: pw, options: { data: { full_name: name } } });
+        const { error } = await supabase.auth.signUp({ email, password: pw, options: { data: { full_name: name, whatsapp: wa } } });
         if (error) throw error;
         setMsg("Account created! If asked, confirm your email, then sign in. New accounts stay pending until an admin enrols you.");
         setMode("signin");
@@ -33,7 +33,8 @@ export default function Auth() {
           <div className="text-xs font-bold uppercase tracking-widest" style={{ color: C.red }}>Get Paid to Teach Online · Masterclass</div>
           <h1 className="mt-1.5 text-2xl font-extrabold tracking-tight">{mode === "signup" ? "Create your account" : "Welcome back"}</h1>
           <div className="mt-5 space-y-3">
-            {mode === "signup" && <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" className="w-full rounded-2xl px-4 py-3 text-sm" style={inp} />}
+            {mode === "signup" && <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name (as you want it on your certificate)" className="w-full rounded-2xl px-4 py-3 text-sm" style={inp} />}
+            {mode === "signup" && <input value={wa} onChange={(e) => setWa(e.target.value)} placeholder="WhatsApp number (the one in the group)" className="w-full rounded-2xl px-4 py-3 text-sm" style={inp} />}
             <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="Email" className="w-full rounded-2xl px-4 py-3 text-sm" style={inp} />
             <input value={pw} onChange={(e) => setPw(e.target.value)} type="password" placeholder="Password" onKeyDown={(e) => { if (e.key === "Enter") submit(); }} className="w-full rounded-2xl px-4 py-3 text-sm" style={inp} />
           </div>

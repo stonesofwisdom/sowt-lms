@@ -40,7 +40,7 @@ function Members() {
           <div key={r.id} className="flex flex-wrap items-center gap-3 px-5 py-4" style={{ borderTop: `1px solid ${C.line}` }}>
             <div className="min-w-0 flex-1">
               <div className="font-bold truncate">{r.full_name || "(no name)"}</div>
-              <div className="text-xs truncate" style={{ color: C.muted }}>{r.email}</div>
+              <div className="text-xs truncate" style={{ color: C.muted }}>{r.email}{r.whatsapp_number ? " · " + r.whatsapp_number : ""}</div>
             </div>
             <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold" style={r.status === "enrolled" ? { background: "#E6F5EE", color: C.green } : { background: "#FDECEC", color: C.red }}>{r.status}</span>
             <select value={r.role} onChange={(e) => set(r.id, { role: e.target.value })} className="rounded-xl px-2 py-1.5 text-xs font-bold" style={{ background: C.bg, border: `1px solid ${C.line}` }}>
