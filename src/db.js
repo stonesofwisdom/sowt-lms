@@ -102,3 +102,4 @@ export async function fetchMyAttendance(uid) {
   const { data } = await supabase.from("attendance").select("session_id, present").eq("tutor_id", uid);
   return (data || []).filter((r) => r.present).map((r) => r.session_id);
 }
+export async function setSort(id, sort) { await supabase.from("sessions").update({ sort }).eq("id", id); }

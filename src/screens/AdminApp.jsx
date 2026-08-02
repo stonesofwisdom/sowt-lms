@@ -2,10 +2,10 @@ import React, { useEffect, useState } from "react";
 import Shell from "./Shell.jsx";
 import { Header, Loading, Spinner } from "../components/ui.jsx";
 import { C } from "../theme";
-import { fetchProfiles, updateProfile, fetchCourse, saveSession, addSession, deleteSession, addAssignment, saveAssignment, deleteAssignment, fetchAnnouncements, postAnnouncement, fetchFacilitators } from "../db";
+import { fetchProfiles, updateProfile, fetchCourse, saveSession, addSession, deleteSession, addAssignment, saveAssignment, deleteAssignment, fetchAnnouncements, postAnnouncement, fetchFacilitators, setSort } from "../db";
 import { AnnouncementsList } from "./TutorApp.jsx";
 import Community from "./Community.jsx";
-import { Users, BookOpen, Megaphone, Check, X, Plus, Trash2, Lock, Unlock, Search } from "lucide-react";
+import { Users, BookOpen, Megaphone, Check, X, Plus, Trash2, Lock, Unlock, Search, ChevronUp, ChevronDown } from "lucide-react";
 
 export default function AdminApp({ profile, onSignOut }) {
   const [tab, setTab] = useState("members");
@@ -70,6 +70,7 @@ function Content() {
   async function save(s) { setSaving(true); await saveSession(s); setSaving(false); }
   async function toggle(s, field) { const patch = { [field]: !s[field] }; if (field === "is_open" && s.is_open) patch.assignments_active = false; if (field === "assignments_active" && !s.assignments_active) patch.is_open = true; edit(s.id, patch); await saveSession({ ...s, ...patch }); }
   async function newSession() { const sort = (sessions?.length || 0) + 1; await addSession(sort); load(); }
+  async function move(i, dir) { const j = i + dir; if (j < 0 || j >= sessions.length) return; const arr = [...sessions]; const t = arr[i]; arr[i] = arr[j]; arr[j] = t; const renum = arr.map((x, idx) => ({ ...x, sort: idx + 1 })); setSessions(renum); await Promise.all(renum.map((x) => setSort(x.id, x.sort))); }
   async function remove(id) { await deleteSession(id); load(); }
   async function newA(sid) { await addAssignment(sid); load(); }
   async function saveA(a) { await saveAssignment(a); }
@@ -86,12 +87,16 @@ function Content() {
       </div>
       <datalist id="faclist">{["SOWT Faculty", ...facs].map((n) => <option key={n} value={n} />)}</datalist>
       <div className="mt-3 space-y-3">
-        {sessions.map((s) => (
+        {sessions.map((s, i) => (
           <div key={s.id} className="rounded-3xl p-4" style={{ background: C.card, border: `1px solid ${C.line}` }}>
             <div className="flex flex-wrap items-center gap-2 mb-3">
               <button onClick={() => toggle(s, "is_open")} className="btn inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold" style={s.is_open ? { background: "#E6F5EE", color: C.green } : { background: "#FDECEC", color: C.red }}>{s.is_open ? <><Unlock size={13} /> Module open</> : <><Lock size={13} /> Module locked</>}</button>
               <button onClick={() => toggle(s, "assignments_active")} className="btn inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold" style={s.assignments_active ? { background: "#E6F5EE", color: C.green } : { background: C.bg, color: C.muted, border: `1px solid ${C.line}` }}>{s.assignments_active ? <><Unlock size={13} /> Assignments active</> : <><Lock size={13} /> Assignments locked</>}</button>
-              <button onClick={() => remove(s.id)} className="ml-auto"><Trash2 size={16} color={C.red} /></button>
+              <div className="ml-auto flex items-center gap-1">
+                <button onClick={() => move(i, -1)} title="Move up"><ChevronUp size={18} color={C.muted} /></button>
+                <button onClick={() => move(i, 1)} title="Move down"><ChevronDown size={18} color={C.muted} /></button>
+                <button onClick={() => remove(s.id)} title="Delete"><Trash2 size={16} color={C.red} /></button>
+              </div>
             </div>
             <div className="grid gap-2">
               <div className="flex flex-wrap gap-2">
