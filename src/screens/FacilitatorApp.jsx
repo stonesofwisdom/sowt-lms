@@ -2,30 +2,40 @@ import React, { useEffect, useState } from "react";
 import Shell from "./Shell.jsx";
 import { Header, Loading, Spinner } from "../components/ui.jsx";
 import { C } from "../theme";
-import { fetchCourse, saveSession, fetchAllSubs, updateSubmission, fetchAnnouncements, postAnnouncement } from "../db";
-import { AnnouncementsList } from "./TutorApp.jsx";
+import { fetchCourse, saveSession, fetchAllSubs, updateSubmission, fetchTutors, fetchSessionAttendance, setAttendance } from "../db";
+import Community from "./Community.jsx";
 import { ai, feedbackPrompt } from "../ai";
-import { BookOpen, ClipboardCheck, Megaphone, Lock, Unlock, Check, ArrowLeft, Sparkles } from "lucide-react";
+import { BookOpen, ClipboardCheck, MessageSquare, Lock, Unlock, Check, ArrowLeft, Sparkles, CheckCircle2, Circle } from "lucide-react";
 
 export default function FacilitatorApp({ profile, onSignOut }) {
   const [tab, setTab] = useState("sessions");
   const nav = [
     { id: "sessions", label: "My sessions", icon: BookOpen },
     { id: "subs", label: "Submissions", icon: ClipboardCheck },
-    { id: "announcements", label: "Announcements", icon: Megaphone },
+    { id: "announcements", label: "Community", icon: MessageSquare },
   ];
   return (
     <Shell roleLabel="Facilitator" roleColor={C.purple} nav={nav} tab={tab} setTab={setTab} profile={profile} onSignOut={onSignOut}>
       {tab === "sessions" && <MySessions me={profile.full_name} />}
       {tab === "subs" && <Submissions me={profile.full_name} />}
-      {tab === "announcements" && <FacAnnouncements profile={profile} />}
+      {tab === "announcements" && <Community profile={profile} canAnnounce={true} />}
     </Shell>
   );
 }
 
 function MySessions({ me }) {
   const [sessions, setSessions] = useState(null);
-  async function load() { const all = await fetchCourse(); setSessions(all.filter((s) => s.facilitator === me)); }
+  const [tutors, setTutors] = useState([]);
+  const [att, setAtt] = useState({});
+  async function load() {
+    const all = await fetchCourse();
+    const mine = all.filter((s) => s.facilitator === me);
+    setSessions(mine);
+    const ts = await fetchTutors(); setTutors(ts);
+    const map = {};
+    for (const s of mine) { const rows = await fetchSessionAttendance(s.id); rows.forEach((r) => { map[s.id + ":" + r.tutor_id] = r.present; }); }
+    setAtt(map);
+  }
   useEffect(() => { load(); }, []);
   async function toggle(s, field) {
     const patch = { [field]: !s[field] };
@@ -34,29 +44,42 @@ function MySessions({ me }) {
     setSessions((ss) => ss.map((x) => (x.id === s.id ? { ...x, ...patch } : x)));
     await saveSession({ ...s, ...patch });
   }
+  async function mark(sid, tid) {
+    const key = sid + ":" + tid; const now = !att[key];
+    setAtt((m) => ({ ...m, [key]: now }));
+    await setAttendance(sid, tid, now);
+  }
   if (!sessions) return <Loading />;
   return (
     <div className="fade-in">
-      <Header eyebrow={`Facilitator · ${me}`} title="My sessions" />
-      <p className="mt-2 text-sm" style={{ color: C.muted }}>After you teach a session live, open the module and activate its assignments so tutors can submit.</p>
+      <Header eyebrow={"Facilitator \u00b7 " + me} title="My sessions" />
+      <p className="mt-2 text-sm" style={{ color: C.muted }}>After you teach live, open the module, activate assignments, and tick who attended.</p>
       <div className="mt-8 space-y-4">
-        {sessions.length === 0 && <div className="rounded-3xl p-8 text-center text-sm" style={{ background: C.card, border: `1px solid ${C.line}`, color: C.muted }}>No sessions assigned to you yet. (An admin sets the facilitator on each session.)</div>}
-        {sessions.map((s) => (
-          <div key={s.id} className="rounded-3xl p-5" style={{ background: C.card, border: `1px solid ${C.line}` }}>
-            <div className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.muted }}>{s.week} · {s.session_date}</div>
+        {sessions.length === 0 && <div className="rounded-3xl p-8 text-center text-sm" style={{ background: C.card, border: "1px solid " + C.line, color: C.muted }}>No sessions assigned to you yet. (An admin sets the facilitator on each session.)</div>}
+        {sessions.map((s) => { const attCount = tutors.filter((t) => att[s.id + ":" + t.id]).length; return (
+          <div key={s.id} className="rounded-3xl p-5" style={{ background: C.card, border: "1px solid " + C.line }}>
+            <div className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.muted }}>{s.week} \u00b7 {s.session_date}</div>
             <div className="mt-1 font-black text-lg leading-snug">{s.title}</div>
-            {s.activity && <div className="mt-3 rounded-2xl p-3 text-sm" style={{ background: "#EEF0FE", border: `1px solid ${C.blue}` }}><span className="font-bold" style={{ color: C.blue }}>In the live session: </span>{s.activity}</div>}
+            {s.activity && <div className="mt-3 rounded-2xl p-3 text-sm" style={{ background: "#EEF0FE", border: "1px solid " + C.blue }}><span className="font-bold" style={{ color: C.blue }}>In the live session: </span>{s.activity}</div>}
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <button onClick={() => toggle(s, "is_open")} className="btn inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold" style={s.is_open ? { background: "#E6F5EE", color: C.green } : { background: "#FDECEC", color: C.red }}>{s.is_open ? <><Unlock size={13} /> Module open</> : <><Lock size={13} /> Module locked</>}</button>
-              <button onClick={() => toggle(s, "assignments_active")} className="btn inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold" style={s.assignments_active ? { background: "#E6F5EE", color: C.green } : { background: C.bg, color: C.muted, border: `1px solid ${C.line}` }}>{s.assignments_active ? <><Unlock size={13} /> Assignments active</> : <><Lock size={13} /> Assignments locked</>}</button>
+              <button onClick={() => toggle(s, "assignments_active")} className="btn inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold" style={s.assignments_active ? { background: "#E6F5EE", color: C.green } : { background: C.bg, color: C.muted, border: "1px solid " + C.line }}>{s.assignments_active ? <><Unlock size={13} /> Assignments active</> : <><Lock size={13} /> Assignments locked</>}</button>
+            </div>
+            <div className="mt-4">
+              <div className="text-[11px] font-bold uppercase tracking-wide mb-2" style={{ color: C.muted }}>Attendance ({attCount}/{tutors.length})</div>
+              <div className="flex flex-wrap gap-2">
+                {tutors.map((t) => { const on = att[s.id + ":" + t.id]; return (
+                  <button key={t.id} onClick={() => mark(s.id, t.id)} className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold" style={on ? { background: "#E6F5EE", color: C.green } : { background: C.bg, color: C.muted, border: "1px solid " + C.line }}>{on ? <CheckCircle2 size={13} /> : <Circle size={13} />}{(t.full_name || t.email).split(" ")[0]}</button>
+                ); })}
+                {tutors.length === 0 && <span className="text-xs" style={{ color: C.muted }}>No enrolled tutors yet.</span>}
+              </div>
             </div>
           </div>
-        ))}
+        ); })}
       </div>
     </div>
   );
 }
-
 function Submissions({ me }) {
   const [subs, setSubs] = useState(null);
   const [openId, setOpenId] = useState(null);
@@ -114,26 +137,3 @@ function Submissions({ me }) {
   );
 }
 
-function FacAnnouncements({ profile }) {
-  const [ann, setAnn] = useState(null);
-  const [title, setTitle] = useState(""); const [body, setBody] = useState(""); const [busy, setBusy] = useState(false);
-  async function load() { setAnn(await fetchAnnouncements()); }
-  useEffect(() => { load(); }, []);
-  async function post() {
-    if (!title.trim() || !body.trim()) return; setBusy(true);
-    await postAnnouncement({ author_name: profile.full_name || "Facilitator", author_role: "Facilitator", title: title.trim(), body: body.trim() });
-    setTitle(""); setBody(""); setBusy(false); load();
-  }
-  if (!ann) return <Loading />;
-  return (
-    <div className="fade-in">
-      <Header eyebrow="Broadcast" title="Announcements" />
-      <div className="mt-6 rounded-3xl p-5" style={{ background: C.card, border: `1px solid ${C.line}` }}>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" className="w-full rounded-xl px-3 py-2 text-sm font-bold" style={{ background: C.bg, border: `1px solid ${C.line}` }} />
-        <textarea rows={2} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Message to the cohort" className="mt-2 w-full resize-none rounded-xl px-3 py-2 text-sm" style={{ background: C.bg, border: `1px solid ${C.line}` }} />
-        <button onClick={post} disabled={busy} className="btn mt-2 inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-bold text-white" style={{ background: C.blue }}>{busy ? <Spinner light /> : <Megaphone size={15} />} Post</button>
-      </div>
-      <div className="mt-4"><AnnouncementsList ann={ann} /></div>
-    </div>
-  );
-}

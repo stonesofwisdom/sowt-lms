@@ -2,9 +2,13 @@ import React, { useEffect, useState } from "react";
 import Shell from "./Shell.jsx";
 import { Header, Loading, Spinner } from "../components/ui.jsx";
 import { C } from "../theme";
-import { fetchCourse, fetchMySubs, submitAnswer, fetchAnnouncements, updateProfile } from "../db";
+import { fetchCourse, fetchMySubs, submitAnswer, fetchMyAttendance, updateProfile } from "../db";
+import Community from "./Community.jsx";
+import Schedule from "./Schedule.jsx";
+import AIStudio from "./AIStudio.jsx";
+import Certificate from "./Certificate.jsx";
 import { ai, feedbackPrompt } from "../ai";
-import { Home as HomeIcon, BookOpen, ClipboardCheck, MessageSquare, Play, Lock, Sparkles, ArrowLeft, Megaphone, Check, CheckCircle2, Circle, Target } from "lucide-react";
+import { Home as HomeIcon, BookOpen, ClipboardCheck, MessageSquare, Play, Lock, Sparkles, ArrowLeft, Megaphone, Check, CheckCircle2, Circle, Target, Calendar, Bot, Award } from "lucide-react";
 
 const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSczqV9nPfucbPDmd9t_8YBhszF1BQbz9CE__IGDBH_Yrdj-rA/viewform?embedded=true";
 
@@ -14,15 +18,15 @@ export default function TutorApp({ profile, onSignOut }) {
   const [tab, setTab] = useState("home");
   const [sessions, setSessions] = useState([]);
   const [subs, setSubs] = useState({});
-  const [ann, setAnn] = useState([]);
+  const [attended, setAttended] = useState([]);
   const [lesson, setLesson] = useState(null);
   const [loading, setLoading] = useState(true);
 
   async function load() {
-    const [course, mine, a] = await Promise.all([fetchCourse(), fetchMySubs(profile.id), fetchAnnouncements()]);
+    const [course, mine, att] = await Promise.all([fetchCourse(), fetchMySubs(profile.id), fetchMyAttendance(profile.id)]);
     setSessions(course);
     const map = {}; mine.forEach((s) => (map[s.assignment_id] = s)); setSubs(map);
-    setAnn(a); setLoading(false);
+    setAttended(att); setLoading(false);
   }
   useEffect(() => { load(); }, []);
 
@@ -31,9 +35,12 @@ export default function TutorApp({ profile, onSignOut }) {
   const pct = total ? Math.round((completed / total) * 100) : 0;
   const nav = [
     { id: "home", label: "Home", icon: HomeIcon },
+    { id: "schedule", label: "Schedule", icon: Calendar },
     { id: "modules", label: "Modules", icon: BookOpen },
+    { id: "studio", label: "AI Studio", icon: Bot },
     { id: "assignments", label: "Assignments", icon: ClipboardCheck },
-    { id: "community", label: "Announcements", icon: MessageSquare },
+    { id: "community", label: "Community", icon: MessageSquare },
+    { id: "certificate", label: "Certificate", icon: Award },
   ];
 
   async function onSubmit(a, text) {
@@ -66,8 +73,11 @@ export default function TutorApp({ profile, onSignOut }) {
         {tab === "home" && <TutorHome profile={profile} pct={pct} completed={completed} total={total} next={sessions.find((s) => !s.assignments.every((a) => subs[a.id]))} setTab={setTab} />}
         {tab === "modules" && !lesson && <Modules sessions={sessions} subs={subs} open={setLesson} />}
         {tab === "modules" && lesson && <Lesson session={sessions.find((s) => s.id === lesson)} subs={subs} onBack={() => setLesson(null)} onSubmit={onSubmit} />}
+        {tab === "schedule" && <Schedule sessions={sessions} subs={subs} open={(id) => { setTab("modules"); setLesson(id); }} />}
+        {tab === "studio" && <AIStudio sessions={sessions} />}
         {tab === "assignments" && <TutorAssignments sessions={sessions} subs={subs} open={(id) => { setTab("modules"); setLesson(id); }} />}
-        {tab === "community" && <AnnouncementsList ann={ann} />}
+        {tab === "community" && <Community profile={profile} canAnnounce={false} />}
+        {tab === "certificate" && <Certificate profile={profile} total={sessions.length} completed={completed} attended={attended.length} />}
       </>)}
     </Shell>
     </>

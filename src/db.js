@@ -67,3 +67,38 @@ export async function fetchFacilitators() {
   const { data } = await supabase.from("profiles").select("full_name").eq("role", "facilitator");
   return (data || []).map((x) => x.full_name).filter(Boolean);
 }
+
+// --- Q&A ---
+export async function fetchQuestions() {
+  const [{ data: qs }, { data: ans }] = await Promise.all([
+    supabase.from("questions").select("*").order("created_at", { ascending: false }),
+    supabase.from("answers").select("*").order("created_at"),
+  ]);
+  return (qs || []).map((q) => ({ ...q, answers: (ans || []).filter((a) => a.question_id === q.id) }));
+}
+export async function askQuestion(author_name, body) {
+  const { error } = await supabase.from("questions").insert({ author_name, author_role: "Tutor", body });
+  if (error) throw error;
+}
+export async function answerQuestion(question_id, author_name, author_role, body) {
+  const { error } = await supabase.from("answers").insert({ question_id, author_name, author_role, body });
+  if (error) throw error;
+}
+
+// --- Attendance ---
+export async function fetchTutors() {
+  const { data } = await supabase.from("profiles").select("id, full_name, email").eq("status", "enrolled").eq("role", "tutor");
+  return data || [];
+}
+export async function fetchSessionAttendance(session_id) {
+  const { data } = await supabase.from("attendance").select("*").eq("session_id", session_id);
+  return data || [];
+}
+export async function setAttendance(session_id, tutor_id, present) {
+  const { error } = await supabase.from("attendance").upsert({ session_id, tutor_id, present }, { onConflict: "session_id,tutor_id" });
+  if (error) throw error;
+}
+export async function fetchMyAttendance(uid) {
+  const { data } = await supabase.from("attendance").select("session_id, present").eq("tutor_id", uid);
+  return (data || []).filter((r) => r.present).map((r) => r.session_id);
+}

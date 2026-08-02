@@ -4,6 +4,7 @@ import { Header, Loading, Spinner } from "../components/ui.jsx";
 import { C } from "../theme";
 import { fetchProfiles, updateProfile, fetchCourse, saveSession, addSession, deleteSession, addAssignment, saveAssignment, deleteAssignment, fetchAnnouncements, postAnnouncement, fetchFacilitators } from "../db";
 import { AnnouncementsList } from "./TutorApp.jsx";
+import Community from "./Community.jsx";
 import { Users, BookOpen, Megaphone, Check, X, Plus, Trash2, Lock, Unlock, Search } from "lucide-react";
 
 export default function AdminApp({ profile, onSignOut }) {
@@ -11,13 +12,13 @@ export default function AdminApp({ profile, onSignOut }) {
   const nav = [
     { id: "members", label: "Members", icon: Users },
     { id: "content", label: "Course content", icon: BookOpen },
-    { id: "announcements", label: "Announcements", icon: Megaphone },
+    { id: "announcements", label: "Community", icon: Megaphone },
   ];
   return (
     <Shell roleLabel="Admin" roleColor={C.red} nav={nav} tab={tab} setTab={setTab} profile={profile} onSignOut={onSignOut}>
       {tab === "members" && <Members />}
       {tab === "content" && <Content />}
-      {tab === "announcements" && <AdminAnnouncements profile={profile} />}
+      {tab === "announcements" && <Community profile={profile} canAnnounce={true} />}
     </Shell>
   );
 }
