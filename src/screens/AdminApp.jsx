@@ -2,22 +2,25 @@ import React, { useEffect, useState } from "react";
 import Shell from "./Shell.jsx";
 import { Header, Loading, Spinner } from "../components/ui.jsx";
 import { C } from "../theme";
-import { fetchProfiles, updateProfile, fetchCourse, saveSession, addSession, deleteSession, addAssignment, saveAssignment, deleteAssignment, fetchAnnouncements, postAnnouncement, fetchFacilitators, setSort } from "../db";
+import { fetchProfiles, updateProfile, fetchCourse, saveSession, addSession, deleteSession, addAssignment, saveAssignment, deleteAssignment, fetchAnnouncements, postAnnouncement, fetchFacilitators, setSort, fetchResources, addResource, saveResource, deleteResource } from "../db";
 import { AnnouncementsList } from "./TutorApp.jsx";
 import Community from "./Community.jsx";
-import { Users, BookOpen, Megaphone, Check, X, Plus, Trash2, Lock, Unlock, Search, ChevronUp, ChevronDown } from "lucide-react";
+import { Users, BookOpen, Megaphone, Check, X, Plus, Trash2, Lock, Unlock, Search, ChevronUp, ChevronDown, FolderOpen } from "lucide-react";
 
 export default function AdminApp({ profile, onSignOut }) {
   const [tab, setTab] = useState("members");
   const nav = [
     { id: "members", label: "Members", icon: Users },
     { id: "content", label: "Course content", icon: BookOpen },
+    { id: "resources", label: "Resources", icon: FolderOpen },
     { id: "announcements", label: "Community", icon: Megaphone },
   ];
   return (
     <Shell roleLabel="Admin" roleColor={C.red} nav={nav} tab={tab} setTab={setTab} profile={profile} onSignOut={onSignOut}>
       {tab === "members" && <Members />}
       {tab === "content" && <Content />}
+      {tab === "resources" && <AdminResources />}
+      {tab === "resources" && <AdminResources />}
       {tab === "announcements" && <Community profile={profile} canAnnounce={true} />}
     </Shell>
   );
@@ -104,6 +107,8 @@ function Content() {
                 <input value={s.theme || ""} onChange={(e) => edit(s.id, { theme: e.target.value })} placeholder="Theme" className="rounded-xl px-3 py-2 text-sm flex-1 min-w-[140px]" style={inp} />
                 <input list="faclist" value={s.facilitator || ""} onChange={(e) => edit(s.id, { facilitator: e.target.value })} placeholder="Facilitator name" className="rounded-xl px-3 py-2 text-sm font-semibold min-w-[150px]" style={inp} />
                 <input value={s.session_date || ""} onChange={(e) => edit(s.id, { session_date: e.target.value })} placeholder="Date" className="rounded-xl px-3 py-2 text-sm w-28" style={inp} />
+                <input value={s.session_time || ""} onChange={(e) => edit(s.id, { session_time: e.target.value })} placeholder="Time (e.g. 7:00 PM WAT)" className="rounded-xl px-3 py-2 text-sm w-40" style={inp} />
+                  <input value={s.session_time || ""} onChange={(e) => edit(s.id, { session_time: e.target.value })} placeholder="Time" className="rounded-xl px-3 py-2 text-sm w-32" style={inp} />
               </div>
               <input value={s.title || ""} onChange={(e) => edit(s.id, { title: e.target.value })} placeholder="Session title" className="rounded-xl px-3 py-2 text-sm font-bold" style={inp} />
               <input value={s.recording_url || ""} onChange={(e) => edit(s.id, { recording_url: e.target.value })} placeholder="Recording link (Zoom / YouTube / Drive URL)" className="rounded-xl px-3 py-2 text-sm" style={inp} />
@@ -154,6 +159,41 @@ function AdminAnnouncements({ profile }) {
         <button onClick={post} disabled={busy} className="btn mt-2 inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-bold text-white" style={{ background: C.blue }}>{busy ? <Spinner light /> : <Megaphone size={15} />} Post</button>
       </div>
       <div className="mt-4"><AnnouncementsList ann={ann} /></div>
+    </div>
+  );
+}
+
+function AdminResources() {
+  const [rows, setRows] = useState(null);
+  async function load() { setRows(await fetchResources()); }
+  useEffect(() => { load(); }, []);
+  const inp = { background: C.bg, border: `1px solid ${C.line}` };
+  function edit(id, patch) { setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r))); }
+  async function add() { await addResource(); load(); }
+  async function save(r) { await saveResource(r); }
+  async function del(id) { await deleteResource(id); load(); }
+  if (!rows) return <Loading />;
+  return (
+    <div className="fade-in">
+      <Header eyebrow="Curate" title="Resources" />
+      <p className="mt-2 text-sm" style={{ color: C.muted }}>Add helpful links and materials for tutors and facilitators.</p>
+      <div className="mt-4 flex items-center justify-between">
+        <div className="text-xs font-bold uppercase tracking-widest" style={{ color: C.red }}>Items ({rows.length})</div>
+        <button onClick={add} className="btn inline-flex items-center gap-1.5 rounded-2xl px-4 py-2 text-sm font-bold text-white" style={{ background: C.blue }}><Plus size={15} /> Add resource</button>
+      </div>
+      <div className="mt-3 space-y-3">
+        {rows.map((r) => (
+          <div key={r.id} className="rounded-3xl p-4 space-y-2" style={{ background: C.card, border: `1px solid ${C.line}` }}>
+            <input value={r.title} onChange={(e) => edit(r.id, { title: e.target.value })} onBlur={() => save(r)} placeholder="Title" className="w-full rounded-xl px-3 py-2 text-sm font-bold" style={inp} />
+            <input value={r.url} onChange={(e) => edit(r.id, { url: e.target.value })} onBlur={() => save(r)} placeholder="https://..." className="w-full rounded-xl px-3 py-2 text-sm" style={inp} />
+            <textarea rows={2} value={r.description || ""} onChange={(e) => edit(r.id, { description: e.target.value })} onBlur={() => save(r)} placeholder="Short description" className="w-full resize-none rounded-xl px-3 py-2 text-sm" style={inp} />
+            <div className="flex items-center gap-2 justify-end">
+              <button onClick={() => del(r.id)}><Trash2 size={16} color={C.red} /></button>
+            </div>
+          </div>
+        ))}
+        {rows.length === 0 && <div className="text-sm" style={{ color: C.muted }}>No resources yet.</div>}
+      </div>
     </div>
   );
 }

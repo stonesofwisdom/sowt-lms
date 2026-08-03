@@ -7,14 +7,14 @@ import Community from "./Community.jsx";
 import Schedule from "./Schedule.jsx";
 import AIStudio from "./AIStudio.jsx";
 import Certificate from "./Certificate.jsx";
+import PreCourseForm from "./PreCourseForm.jsx";
+import ResourcesView from "./ResourcesView.jsx";
 import { ai, feedbackPrompt } from "../ai";
-import { Home as HomeIcon, BookOpen, ClipboardCheck, MessageSquare, Play, Lock, Sparkles, ArrowLeft, Megaphone, Check, CheckCircle2, Circle, Target, Calendar, Bot, Award } from "lucide-react";
-
-const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSczqV9nPfucbPDmd9t_8YBhszF1BQbz9CE__IGDBH_Yrdj-rA/viewform?embedded=true";
+import { Home as HomeIcon, BookOpen, ClipboardCheck, MessageSquare, Play, Lock, Sparkles, ArrowLeft, Megaphone, Check, CheckCircle2, Circle, Target, Calendar, Bot, Award, FileText, FolderOpen } from "lucide-react";
 
 export default function TutorApp({ profile, onSignOut }) {
-  const [showForm, setShowForm] = useState(!profile.form_done);
-  async function finishForm() { setShowForm(false); try { await updateProfile(profile.id, { form_done: true }); } catch (e) {} }
+  const [formDone, setFormDone] = useState(!!profile.form_done);
+  async function finishForm() { setFormDone(true); try { await updateProfile(profile.id, { form_done: true }); } catch (e) {} }
   const [tab, setTab] = useState("home");
   const [sessions, setSessions] = useState([]);
   const [subs, setSubs] = useState({});
@@ -34,12 +34,14 @@ export default function TutorApp({ profile, onSignOut }) {
   const completed = sessions.filter((s) => s.assignments.length > 0 && s.assignments.every((a) => subs[a.id])).length;
   const pct = total ? Math.round((completed / total) * 100) : 0;
   const nav = [
+    { id: "form", label: "Pre-Course Form", icon: FileText, dot: !formDone },
     { id: "home", label: "Home", icon: HomeIcon },
     { id: "schedule", label: "Schedule", icon: Calendar },
     { id: "modules", label: "Modules", icon: BookOpen },
     { id: "studio", label: "AI Studio", icon: Bot },
     { id: "assignments", label: "Assignments", icon: ClipboardCheck },
     { id: "community", label: "Community", icon: MessageSquare },
+    { id: "resources", label: "Resources", icon: FolderOpen },
     { id: "certificate", label: "Certificate", icon: Award },
   ];
 
@@ -51,25 +53,9 @@ export default function TutorApp({ profile, onSignOut }) {
   }
 
   return (
-    <>
-      {showForm && (
-        <div className="fixed inset-0 z-50 grid place-items-center p-4" style={{ background: "rgba(20,22,38,.6)" }}>
-          <div className="w-full max-w-2xl rounded-3xl overflow-hidden" style={{ background: C.card }}>
-            <div className="p-5" style={{ borderBottom: `1px solid ${C.line}` }}>
-              <div className="text-xs font-bold uppercase tracking-widest" style={{ color: C.blue }}>Quick 2-minute form</div>
-              <div className="font-black text-lg">Welcome — tell us about you</div>
-              <div className="text-sm" style={{ color: C.muted }}>This helps us teach at exactly your level. Please complete it to continue.</div>
-            </div>
-            <iframe title="Pre-Course Form" src={FORM_URL} className="w-full" style={{ height: 460, border: "none" }} />
-            <div className="p-4 flex items-center justify-between gap-3" style={{ borderTop: `1px solid ${C.line}` }}>
-              <div className="text-xs" style={{ color: C.muted }}>Fill it in above, then continue.</div>
-              <button onClick={finishForm} className="btn rounded-2xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.blue }}>I've completed it — continue</button>
-            </div>
-          </div>
-        </div>
-      )}
     <Shell roleLabel="Tutor" roleColor={C.blue} nav={nav} tab={tab} setTab={(t) => { setTab(t); setLesson(null); }} profile={profile} onSignOut={onSignOut}>
       {loading ? <Loading /> : (<>
+        {tab === "form" && <PreCourseForm done={formDone} onDone={finishForm} />}
         {tab === "home" && <TutorHome profile={profile} pct={pct} completed={completed} total={total} next={sessions.find((s) => !s.assignments.every((a) => subs[a.id]))} setTab={setTab} />}
         {tab === "modules" && !lesson && <Modules sessions={sessions} subs={subs} open={setLesson} />}
         {tab === "modules" && lesson && <Lesson session={sessions.find((s) => s.id === lesson)} subs={subs} onBack={() => setLesson(null)} onSubmit={onSubmit} />}
@@ -77,10 +63,12 @@ export default function TutorApp({ profile, onSignOut }) {
         {tab === "studio" && <AIStudio sessions={sessions} />}
         {tab === "assignments" && <TutorAssignments sessions={sessions} subs={subs} open={(id) => { setTab("modules"); setLesson(id); }} />}
         {tab === "community" && <Community profile={profile} canAnnounce={false} />}
+        {tab === "resources" && <ResourcesView />}
         {tab === "certificate" && <Certificate profile={profile} total={sessions.length} completed={completed} attended={attended.length} />}
+        {tab === "form" && <PreCourseForm done={formDone} onDone={finishForm} />}
+        {tab === "resources" && <ResourcesView />}
       </>)}
     </Shell>
-    </>
   );
 }
 
@@ -104,7 +92,7 @@ function TutorHome({ profile, pct, completed, total, next, setTab }) {
         <div className="rounded-3xl p-6 text-white" style={{ background: C.blue }}>
           <div className="text-sm font-bold uppercase tracking-wide">Next up</div>
           <div className="mt-2 text-lg font-extrabold">{next.week} · {next.title}</div>
-          <div className="mt-1 text-white/80 text-sm">{next.session_date ? `${next.session_date} · ` : ""}7:00 PM WAT · Zoom</div>
+          <div className="mt-1 text-white/80 text-sm">{next.session_date ? `${next.session_date} · ` : ""}{next.session_time || "7:00 PM WAT"} · Zoom</div>
           <button onClick={() => setTab("modules")} className="btn mt-4 rounded-2xl px-4 py-2 text-sm font-bold" style={{ background: "#fff", color: C.blue }}>Go to modules</button>
         </div>
       )}

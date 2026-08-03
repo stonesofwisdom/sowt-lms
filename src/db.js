@@ -103,3 +103,19 @@ export async function fetchMyAttendance(uid) {
   return (data || []).filter((r) => r.present).map((r) => r.session_id);
 }
 export async function setSort(id, sort) { await supabase.from("sessions").update({ sort }).eq("id", id); }
+
+// --- Resources ---
+export async function fetchResources() {
+  const { data } = await supabase.from("resources").select("*").order("sort");
+  return data || [];
+}
+export async function addResource() {
+  const { data, error } = await supabase.from("resources").insert({ title: "New resource", url: "https://", description: "", sort: 999 }).select().single();
+  if (error) throw error;
+  return data;
+}
+export async function saveResource(r) {
+  const { error } = await supabase.from("resources").update({ title: r.title, url: r.url, description: r.description, sort: r.sort }).eq("id", r.id);
+  if (error) throw error;
+}
+export async function deleteResource(id) { await supabase.from("resources").delete().eq("id", id); }

@@ -4,21 +4,33 @@ import { Header, Loading, Spinner } from "../components/ui.jsx";
 import { C } from "../theme";
 import { fetchCourse, saveSession, fetchAllSubs, updateSubmission, fetchTutors, fetchSessionAttendance, setAttendance } from "../db";
 import Community from "./Community.jsx";
+import AIStudio from "./AIStudio.jsx";
+import Schedule from "./Schedule.jsx";
+import ResourcesView from "./ResourcesView.jsx";
+import { fetchCourse as _fc } from "../db";
 import { ai, feedbackPrompt } from "../ai";
-import { BookOpen, ClipboardCheck, MessageSquare, Lock, Unlock, Check, ArrowLeft, Sparkles, CheckCircle2, Circle } from "lucide-react";
+import { BookOpen, ClipboardCheck, MessageSquare, Lock, Unlock, Check, ArrowLeft, Sparkles, CheckCircle2, Circle, Calendar, Bot, FolderOpen } from "lucide-react";
 
 export default function FacilitatorApp({ profile, onSignOut }) {
   const [tab, setTab] = useState("sessions");
+  const [sessions, setSessions] = useState([]);
+  useEffect(() => { fetchCourse().then(setSessions); }, []);
   const nav = [
     { id: "sessions", label: "My sessions", icon: BookOpen },
     { id: "subs", label: "Submissions", icon: ClipboardCheck },
+    { id: "schedule", label: "Schedule", icon: Calendar },
+    { id: "studio", label: "AI Studio", icon: Bot },
     { id: "announcements", label: "Community", icon: MessageSquare },
+    { id: "resources", label: "Resources", icon: FolderOpen },
   ];
   return (
     <Shell roleLabel="Facilitator" roleColor={C.purple} nav={nav} tab={tab} setTab={setTab} profile={profile} onSignOut={onSignOut}>
       {tab === "sessions" && <MySessions me={profile.full_name} />}
       {tab === "subs" && <Submissions me={profile.full_name} />}
+      {tab === "schedule" && <Schedule sessions={sessions} subs={{}} open={() => {}} />}
+      {tab === "studio" && <AIStudio sessions={sessions} />}
       {tab === "announcements" && <Community profile={profile} canAnnounce={true} />}
+      {tab === "resources" && <ResourcesView />}
     </Shell>
   );
 }

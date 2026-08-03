@@ -4,6 +4,7 @@ import { C } from "../theme";
 import { Menu, X, LogOut } from "lucide-react";
 
 export default function Shell({ roleLabel, roleColor, nav, tab, setTab, profile, onSignOut, children }) {
+
   const [open, setOpen] = useState(false);
   return (
     <div className="flex min-h-screen">
@@ -14,7 +15,7 @@ export default function Shell({ roleLabel, roleColor, nav, tab, setTab, profile,
           {roleLabel && <div className="mb-6 inline-flex w-max items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wide text-white" style={{ background: roleColor || C.blue }}>{roleLabel}</div>}
           <nav className="flex flex-col gap-1">
             {nav.map((n) => { const A = n.icon; const active = tab === n.id; return (
-              <button key={n.id} onClick={() => { setTab(n.id); setOpen(false); }} className="btn flex items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold" style={active ? { background: "#EEF0FE", color: C.blue } : { color: C.muted }}><A size={18} />{n.label}</button>
+              <button key={n.id} onClick={() => { setTab(n.id); setOpen(false); }} className="btn flex items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold" style={active ? { background: "#EEF0FE", color: C.blue } : { color: C.muted }}><A size={18} /><span className="flex-1">{n.label}</span>{n.dot && <span className="h-2.5 w-2.5 rounded-full" style={{ background: C.red }} />}</button>
             ); })}
           </nav>
           <div className="mt-auto pt-6">
@@ -26,7 +27,11 @@ export default function Shell({ roleLabel, roleColor, nav, tab, setTab, profile,
       </aside>
       <main className="flex-1 min-h-screen">
         <div className="md:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3" style={{ background: C.card, borderBottom: `1px solid ${C.line}` }}>
-          <Logo height={28} /><button onClick={() => setOpen(true)} className="btn rounded-xl p-2" style={{ background: "#EEF0FE", color: C.blue }}><Menu size={20} /></button>
+          <Logo height={28} />
+          <div className="flex items-center gap-2">
+            <button onClick={onSignOut} title="Sign out" className="btn rounded-xl p-2" style={{ background: C.bg, color: C.muted }}><LogOut size={18} /></button>
+            <button onClick={() => setOpen(true)} className="btn rounded-xl p-2" style={{ background: "#EEF0FE", color: C.blue }}><Menu size={20} /></button>
+          </div>
         </div>
         <div className="mx-auto max-w-4xl px-5 md:px-10 py-8 md:py-12">{children}</div>
       </main>
