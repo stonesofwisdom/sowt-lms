@@ -93,7 +93,12 @@ function TutorHome({ profile, pct, completed, total, next, setTab }) {
           <div className="text-sm font-bold uppercase tracking-wide">Next up</div>
           <div className="mt-2 text-lg font-extrabold">{next.week} · {next.title}</div>
           <div className="mt-1 text-white/80 text-sm">{next.session_date ? `${next.session_date} · ` : ""}{next.session_time || "7:00 PM WAT"} · Zoom</div>
-          <button onClick={() => setTab("modules")} className="btn mt-4 rounded-2xl px-4 py-2 text-sm font-bold" style={{ background: "#fff", color: C.blue }}>Go to modules</button>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {isSessionToday(next.session_date) && next.is_open && next.live_class_url && (
+              <a href={next.live_class_url} target="_blank" rel="noreferrer" className="btn rounded-2xl px-4 py-2 text-sm font-black" style={{ background: C.yellow, color: C.ink }}>Join live class now</a>
+            )}
+            <button onClick={() => setTab("modules")} className="btn rounded-2xl px-4 py-2 text-sm font-bold" style={{ background: "#fff", color: C.blue }}>Go to modules</button>
+          </div>
         </div>
       )}
     </div>
@@ -132,8 +137,32 @@ function Modules({ sessions, subs, open }) {
   );
 }
 
+function isSessionToday(dateStr) {
+  if (!dateStr) return false;
+  const t = new Date();
+  const y = t.getFullYear(); const m = String(t.getMonth() + 1).padStart(2, "0"); const d = String(t.getDate()).padStart(2, "0");
+  const iso = `${y}-${m}-${d}`;
+  const s = String(dateStr).trim();
+  // Try ISO first
+  if (s === iso) return true;
+  // Try parsing common formats
+  const parsed = new Date(s);
+  if (!isNaN(parsed)) {
+    return parsed.getFullYear() === t.getFullYear() && parsed.getMonth() === t.getMonth() && parsed.getDate() === t.getDate();
+  }
+  // Try DD/MM/YYYY or DD-MM-YYYY
+  const parts = s.replace(/[-.]/g, "/").split("/");
+  if (parts.length === 3) {
+    const [a, b, c] = parts.map((x) => parseInt(x, 10));
+    // assume day/month/year
+    if (a === t.getDate() && b === t.getMonth() + 1 && (c === t.getFullYear() || c === t.getFullYear() % 100)) return true;
+  }
+  return false;
+}
+
 function Lesson({ session, subs, onBack, onSubmit }) {
   if (!session) return null;
+  const liveToday = isSessionToday(session.session_date) && session.is_open && session.live_class_url;
   const moduleLocked = !session.is_open;
   const assignmentsLocked = !session.is_open || !session.assignments_active;
   return (
@@ -142,6 +171,12 @@ function Lesson({ session, subs, onBack, onSubmit }) {
       <div className="mt-3 text-xs font-bold uppercase tracking-widest" style={{ color: C.red }}>{session.week} · {session.theme}</div>
       <h1 className="mt-1 text-2xl md:text-3xl font-extrabold tracking-tight">{session.title}</h1>
       {session.facilitator && <div className="mt-2 text-sm font-semibold" style={{ color: C.blue }}>Facilitated by {session.facilitator}</div>}
+      {liveToday && (
+        <a href={session.live_class_url} target="_blank" rel="noreferrer" className="btn mt-4 inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-black text-white" style={{ background: C.red }}>
+          <span className="grid place-items-center h-2 w-2 rounded-full" style={{ background: "#fff" }} />
+          Join live class now
+        </a>
+      )}
 
       <div className="mt-6 rounded-3xl overflow-hidden grid place-items-center text-center p-8" style={{ background: C.ink, aspectRatio: "16 / 9" }}>
         {moduleLocked ? (

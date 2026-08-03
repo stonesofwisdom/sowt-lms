@@ -224,3 +224,6 @@ drop policy if exists res_sel on public.resources;
 create policy res_sel on public.resources for select using (public.is_enrolled() or public.is_staff());
 drop policy if exists res_all on public.resources;
 create policy res_all on public.resources for all using (public.is_admin()) with check (public.is_admin());
+
+-- Live class URL per session
+alter table public.sessions add column if not exists live_class_url text;

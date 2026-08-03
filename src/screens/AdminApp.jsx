@@ -106,12 +106,13 @@ function Content() {
                 <input value={s.week || ""} onChange={(e) => edit(s.id, { week: e.target.value })} placeholder="Week" className="rounded-xl px-3 py-2 text-sm font-bold w-24" style={inp} />
                 <input value={s.theme || ""} onChange={(e) => edit(s.id, { theme: e.target.value })} placeholder="Theme" className="rounded-xl px-3 py-2 text-sm flex-1 min-w-[140px]" style={inp} />
                 <input list="faclist" value={s.facilitator || ""} onChange={(e) => edit(s.id, { facilitator: e.target.value })} placeholder="Facilitator name" className="rounded-xl px-3 py-2 text-sm font-semibold min-w-[150px]" style={inp} />
-                <input value={s.session_date || ""} onChange={(e) => edit(s.id, { session_date: e.target.value })} placeholder="Date" className="rounded-xl px-3 py-2 text-sm w-28" style={inp} />
+                <input type="date" value={s.session_date || ""} onChange={(e) => edit(s.id, { session_date: e.target.value })} placeholder="YYYY-MM-DD" className="rounded-xl px-3 py-2 text-sm w-40" style={inp} />
                 <input value={s.session_time || ""} onChange={(e) => edit(s.id, { session_time: e.target.value })} placeholder="Time (e.g. 7:00 PM WAT)" className="rounded-xl px-3 py-2 text-sm w-40" style={inp} />
                   <input value={s.session_time || ""} onChange={(e) => edit(s.id, { session_time: e.target.value })} placeholder="Time" className="rounded-xl px-3 py-2 text-sm w-32" style={inp} />
               </div>
               <input value={s.title || ""} onChange={(e) => edit(s.id, { title: e.target.value })} placeholder="Session title" className="rounded-xl px-3 py-2 text-sm font-bold" style={inp} />
-              <input value={s.recording_url || ""} onChange={(e) => edit(s.id, { recording_url: e.target.value })} placeholder="Recording link (Zoom / YouTube / Drive URL)" className="rounded-xl px-3 py-2 text-sm" style={inp} />
+              <input value={s.live_class_url || ""} onChange={(e) => edit(s.id, { live_class_url: e.target.value })} placeholder="Live class link (Zoom meeting URL) — shown to tutors on session day" className="rounded-xl px-3 py-2 text-sm" style={inp} />
+              <input value={s.recording_url || ""} onChange={(e) => edit(s.id, { recording_url: e.target.value })} placeholder="Recording link (Zoom / YouTube / Drive URL) — shown after class" className="rounded-xl px-3 py-2 text-sm" style={inp} />
               <textarea rows={2} value={s.description || ""} onChange={(e) => edit(s.id, { description: e.target.value })} placeholder="Description" className="resize-none rounded-xl px-3 py-2 text-sm" style={inp} />
               <textarea rows={3} value={(s.objectives || []).join("\n")} onChange={(e) => edit(s.id, { objectives: e.target.value.split("\n").filter((x) => x.trim()) })} placeholder="Objectives (one per line)" className="resize-none rounded-xl px-3 py-2 text-sm" style={inp} />
               <textarea rows={2} value={s.activity || ""} onChange={(e) => edit(s.id, { activity: e.target.value })} placeholder="In-session activity" className="resize-none rounded-xl px-3 py-2 text-sm" style={inp} />
