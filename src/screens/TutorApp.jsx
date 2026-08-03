@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import Shell from "./Shell.jsx";
 import { Header, Loading, Spinner } from "../components/ui.jsx";
 import { C } from "../theme";
-import { fetchCourse, fetchMySubs, submitAnswer, fetchMyAttendance, updateProfile } from "../db";
+import { fetchCourse, fetchMySubs, submitAnswer, fetchMyAttendance, updateProfile, fetchAnnouncements, fetchResources } from "../db";
 import Community from "./Community.jsx";
 import Schedule from "./Schedule.jsx";
 import AIStudio from "./AIStudio.jsx";
@@ -19,14 +19,23 @@ export default function TutorApp({ profile, onSignOut }) {
   const [sessions, setSessions] = useState([]);
   const [subs, setSubs] = useState({});
   const [attended, setAttended] = useState([]);
+  const [latestAnn, setLatestAnn] = useState(null);
+  const [latestRes, setLatestRes] = useState(null);
+  const seenAnn = localStorage.getItem("seenAnn_" + profile.id) || "";
+  const seenRes = localStorage.getItem("seenRes_" + profile.id) || "";
+  const hasNewAnn = latestAnn && latestAnn > seenAnn;
+  const hasNewRes = latestRes && latestRes > seenRes;
   const [lesson, setLesson] = useState(null);
   const [loading, setLoading] = useState(true);
 
   async function load() {
-    const [course, mine, att] = await Promise.all([fetchCourse(), fetchMySubs(profile.id), fetchMyAttendance(profile.id)]);
+    const [course, mine, att, anns, ress] = await Promise.all([fetchCourse(), fetchMySubs(profile.id), fetchMyAttendance(profile.id), fetchAnnouncements(), fetchResources()]);
     setSessions(course);
     const map = {}; mine.forEach((s) => (map[s.assignment_id] = s)); setSubs(map);
-    setAttended(att); setLoading(false);
+    setAttended(att);
+    setLatestAnn(anns[0]?.created_at || null);
+    setLatestRes(ress.reduce((m, r) => (r.created_at > m ? r.created_at : m), ""));
+    setLoading(false);
   }
   useEffect(() => { load(); }, []);
 
@@ -53,7 +62,7 @@ export default function TutorApp({ profile, onSignOut }) {
   }
 
   return (
-    <Shell roleLabel="Tutor" roleColor={C.blue} nav={nav} tab={tab} setTab={(t) => { setTab(t); setLesson(null); }} profile={profile} onSignOut={onSignOut}>
+    <Shell roleLabel="Tutor" roleColor={C.blue} nav={nav} tab={tab} setTab={(t) => { markSeen(t); setTab(t); setLesson(null); }} profile={profile} onSignOut={onSignOut}>
       {loading ? <Loading /> : (<>
         {tab === "form" && <PreCourseForm done={formDone} onDone={finishForm} />}
         {tab === "home" && <TutorHome profile={profile} pct={pct} completed={completed} total={total} next={sessions.find((s) => !s.assignments.every((a) => subs[a.id]))} setTab={setTab} />}
@@ -182,7 +191,7 @@ function Lesson({ session, subs, onBack, onSubmit }) {
         {moduleLocked ? (
           <div className="text-white/70"><Lock size={30} className="mx-auto" /><div className="mt-2 text-sm font-semibold">Recording locked</div><div className="text-xs text-white/40">Available after the live session</div></div>
         ) : session.recording_url ? (
-          <a href={session.recording_url} target="_blank" rel="noreferrer" className="btn inline-flex items-center gap-2 rounded-2xl px-6 py-3 text-sm font-bold" style={{ background: C.yellow, color: C.ink }}><Play size={18} /> Watch recording</a>
+          <div className="flex flex-col items-center gap-3"><a href={session.recording_url} target="_blank" rel="noreferrer" className="btn inline-flex items-center gap-2 rounded-2xl px-6 py-3 text-sm font-bold" style={{ background: C.yellow, color: C.ink }}><Play size={18} /> Watch recording</a>{session.recording_passcode && <div className="inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-bold text-white/90" style={{ background: "rgba(255,255,255,.1)" }}>Passcode: <span className="font-mono">{session.recording_passcode}</span><button onClick={() => { navigator.clipboard.writeText(session.recording_passcode); }} className="underline">copy</button></div>}</div>
         ) : (
           <div className="text-white/70"><Play size={28} className="mx-auto" /><div className="mt-2 text-sm">Recording link coming soon</div></div>
         )}

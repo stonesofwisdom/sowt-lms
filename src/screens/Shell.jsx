@@ -10,7 +10,7 @@ export default function Shell({ roleLabel, roleColor, nav, tab, setTab, profile,
     <div className="flex min-h-screen">
       <aside className={`${open ? "fixed inset-0 z-40 block" : "hidden"} md:static md:block`}>
         {open && <div className="absolute inset-0 bg-black/40 md:hidden" onClick={() => setOpen(false)} />}
-        <div className="relative h-screen w-72 md:w-64 flex flex-col p-5 md:sticky md:top-0" style={{ background: C.card, borderRight: `1px solid ${C.line}` }}>
+        <div className="relative h-screen w-72 md:w-64 flex flex-col p-5 md:sticky md:top-0 overflow-y-auto" style={{ background: C.card, borderRight: `1px solid ${C.line}` }}>
           <div className="flex items-center justify-between mb-2"><Logo height={34} /><button className="md:hidden" onClick={() => setOpen(false)} style={{ color: C.muted }}><X size={22} /></button></div>
           {roleLabel && <div className="mb-6 inline-flex w-max items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wide text-white" style={{ background: roleColor || C.blue }}>{roleLabel}</div>}
           <nav className="flex flex-col gap-1">
@@ -18,7 +18,7 @@ export default function Shell({ roleLabel, roleColor, nav, tab, setTab, profile,
               <button key={n.id} onClick={() => { setTab(n.id); setOpen(false); }} className="btn flex items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold" style={active ? { background: "#EEF0FE", color: C.blue } : { color: C.muted }}><A size={18} /><span className="flex-1">{n.label}</span>{n.dot && <span className="h-2.5 w-2.5 rounded-full" style={{ background: C.red }} />}</button>
             ); })}
           </nav>
-          <div className="mt-auto pt-6">
+          <div className="mt-auto pt-6 sticky bottom-0" style={{ background: C.card }}>
             <div className="text-sm font-bold truncate">{profile.full_name || profile.email}</div>
             <div className="text-xs truncate" style={{ color: C.muted }}>{profile.email}</div>
             <button onClick={onSignOut} className="mt-3 inline-flex items-center gap-2 text-xs font-semibold" style={{ color: C.muted }}><LogOut size={14} /> Sign out</button>

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import Shell from "./Shell.jsx";
 import { Header, Loading, Spinner } from "../components/ui.jsx";
 import { C } from "../theme";
-import { fetchCourse, saveSession, fetchAllSubs, updateSubmission, fetchTutors, fetchSessionAttendance, setAttendance } from "../db";
+import { fetchCourse, saveSession, fetchAllSubs, updateSubmission, fetchTutors, fetchSessionAttendance, setAttendance, fetchAnnouncements, fetchResources } from "../db";
 import Community from "./Community.jsx";
 import AIStudio from "./AIStudio.jsx";
 import Schedule from "./Schedule.jsx";
@@ -24,7 +24,7 @@ export default function FacilitatorApp({ profile, onSignOut }) {
     { id: "resources", label: "Resources", icon: FolderOpen },
   ];
   return (
-    <Shell roleLabel="Facilitator" roleColor={C.purple} nav={nav} tab={tab} setTab={setTab} profile={profile} onSignOut={onSignOut}>
+    <Shell roleLabel="Facilitator" roleColor={C.purple} nav={nav} tab={tab} setTab={(t) => { markSeen(t); setTab(t); }} profile={profile} onSignOut={onSignOut}>
       {tab === "sessions" && <MySessions me={profile.full_name} />}
       {tab === "subs" && <Submissions me={profile.full_name} />}
       {tab === "schedule" && <Schedule sessions={sessions} subs={{}} open={() => {}} />}

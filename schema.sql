@@ -227,3 +227,6 @@ create policy res_all on public.resources for all using (public.is_admin()) with
 
 -- Live class URL per session
 alter table public.sessions add column if not exists live_class_url text;
+
+-- Recording passcode
+alter table public.sessions add column if not exists recording_passcode text;
