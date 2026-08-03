@@ -7,7 +7,6 @@ import Community from "./Community.jsx";
 import AIStudio from "./AIStudio.jsx";
 import Schedule from "./Schedule.jsx";
 import ResourcesView from "./ResourcesView.jsx";
-import { fetchCourse as _fc } from "../db";
 import { ai, feedbackPrompt } from "../ai";
 import { BookOpen, ClipboardCheck, MessageSquare, Lock, Unlock, Check, ArrowLeft, Sparkles, CheckCircle2, Circle, Calendar, Bot, FolderOpen } from "lucide-react";
 
@@ -23,6 +22,7 @@ export default function FacilitatorApp({ profile, onSignOut }) {
     { id: "announcements", label: "Community", icon: MessageSquare },
     { id: "resources", label: "Resources", icon: FolderOpen },
   ];
+  function markSeen() {}
   return (
     <Shell roleLabel="Facilitator" roleColor={C.purple} nav={nav} tab={tab} setTab={(t) => { markSeen(t); setTab(t); }} profile={profile} onSignOut={onSignOut}>
       {tab === "sessions" && <MySessions me={profile.full_name} />}

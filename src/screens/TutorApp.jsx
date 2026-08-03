@@ -53,6 +53,7 @@ export default function TutorApp({ profile, onSignOut }) {
     { id: "resources", label: "Resources", icon: FolderOpen },
     { id: "certificate", label: "Certificate", icon: Award },
   ];
+  function markSeen(t) { if (t === "community" && latestAnn) localStorage.setItem("seenAnn_" + profile.id, latestAnn); if (t === "resources" && latestRes) localStorage.setItem("seenRes_" + profile.id, latestRes); }
 
   async function onSubmit(a, text) {
     const fb = await ai(feedbackPrompt(a.title, a.prompt, text));
