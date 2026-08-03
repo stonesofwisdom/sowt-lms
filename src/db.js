@@ -154,3 +154,20 @@ export async function saveQuizQuestion(q) {
   await supabase.from("quiz_questions").update({ question: q.question, options: q.options, correct: q.correct, sort: q.sort }).eq("id", q.id);
 }
 export async function deleteQuizQuestion(id) { await supabase.from("quiz_questions").delete().eq("id", id); }
+
+// --- Admin: all data for progress tracking ---
+export async function fetchAllSubmissions() {
+  const { data } = await supabase.from("submissions").select("assignment_id, user_id, status");
+  return data || [];
+}
+export async function fetchAllAttempts() {
+  const { data } = await supabase.from("quiz_attempts").select("quiz_id, user_id, score, passed, created_at");
+  return data || [];
+}
+export async function fetchAllAttendance() {
+  const { data } = await supabase.from("attendance").select("session_id, tutor_id, present");
+  return data || [];
+}
+export async function touchLastActive(uid) {
+  try { await supabase.from("profiles").update({ last_active: new Date().toISOString() }).eq("id", uid); } catch (e) {}
+}

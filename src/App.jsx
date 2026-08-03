@@ -3,6 +3,7 @@ import { supabase } from "./supabase";
 import { Logo, Loading } from "./components/ui.jsx";
 import Auth from "./screens/Auth.jsx";
 import ResetPassword from "./screens/ResetPassword.jsx";
+import { touchLastActive } from "./db";
 import Pending from "./screens/Pending.jsx";
 import TutorApp from "./screens/TutorApp.jsx";
 import AdminApp from "./screens/AdminApp.jsx";
@@ -17,6 +18,7 @@ export default function App() {
   async function loadProfile(uid) {
     const { data } = await supabase.from("profiles").select("*").eq("id", uid).single();
     setProfile(data || null);
+    if (data) touchLastActive(uid);
   }
   async function refresh() {
     const { data } = await supabase.auth.getSession();

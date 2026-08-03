@@ -273,3 +273,6 @@ drop policy if exists qa_sel on public.quiz_attempts;
 create policy qa_sel on public.quiz_attempts for select using (user_id = auth.uid() or public.is_staff());
 drop policy if exists qa_ins on public.quiz_attempts;
 create policy qa_ins on public.quiz_attempts for insert with check (user_id = auth.uid());
+
+-- Track last activity for progress dashboard
+alter table public.profiles add column if not exists last_active timestamptz;

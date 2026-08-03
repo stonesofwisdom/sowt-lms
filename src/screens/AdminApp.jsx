@@ -5,6 +5,7 @@ import { C } from "../theme";
 import { fetchProfiles, updateProfile, fetchCourse, saveSession, addSession, deleteSession, addAssignment, saveAssignment, deleteAssignment, fetchAnnouncements, postAnnouncement, fetchFacilitators, setSort, fetchResources, addResource, saveResource, deleteResource, fetchQuizzes, addQuiz, saveQuiz, deleteQuiz, addQuizQuestion, saveQuizQuestion, deleteQuizQuestion } from "../db";
 import { AnnouncementsList } from "./TutorApp.jsx";
 import Community from "./Community.jsx";
+import Progress from "./Progress.jsx";
 import { Users, BookOpen, Megaphone, Check, X, Plus, Trash2, Lock, Unlock, Search, ChevronUp, ChevronDown, FolderOpen } from "lucide-react";
 
 export default function AdminApp({ profile, onSignOut }) {
@@ -18,6 +19,7 @@ export default function AdminApp({ profile, onSignOut }) {
   return (
     <Shell roleLabel="Admin" roleColor={C.red} nav={nav} tab={tab} setTab={setTab} profile={profile} onSignOut={onSignOut}>
       {tab === "members" && <Members />}
+      {tab === "progress" && <Progress />}
       {tab === "content" && <Content />}
       {tab === "resources" && <AdminResources />}
       {tab === "resources" && <AdminResources />}
