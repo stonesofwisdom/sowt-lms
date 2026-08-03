@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import Shell from "./Shell.jsx";
 import { Header, Loading, Spinner } from "../components/ui.jsx";
 import { C } from "../theme";
-import { fetchCourse, fetchMySubs, submitAnswer, fetchMyAttendance, updateProfile, fetchAnnouncements, fetchResources } from "../db";
+import { fetchCourse, fetchMySubs, submitAnswer, fetchMyAttendance, updateProfile, fetchAnnouncements, fetchResources, fetchQuizzes, fetchMyAttempts } from "../db";
+import Quiz from "./Quiz.jsx";
 import Community from "./Community.jsx";
 import Schedule from "./Schedule.jsx";
 import AIStudio from "./AIStudio.jsx";
@@ -10,7 +11,7 @@ import Certificate from "./Certificate.jsx";
 import PreCourseForm from "./PreCourseForm.jsx";
 import ResourcesView from "./ResourcesView.jsx";
 import { ai, feedbackPrompt } from "../ai";
-import { Home as HomeIcon, BookOpen, ClipboardCheck, MessageSquare, Play, Lock, Sparkles, ArrowLeft, Megaphone, Check, CheckCircle2, Circle, Target, Calendar, Bot, Award, FileText, FolderOpen } from "lucide-react";
+import { Home as HomeIcon, BookOpen, ClipboardCheck, MessageSquare, Play, Lock, Sparkles, ArrowLeft, Megaphone, Check, CheckCircle2, Circle, Target, Calendar, Bot, Award, FileText, FolderOpen, ListChecks } from "lucide-react";
 
 export default function TutorApp({ profile, onSignOut }) {
   const [formDone, setFormDone] = useState(!!profile.form_done);
@@ -19,6 +20,8 @@ export default function TutorApp({ profile, onSignOut }) {
   const [sessions, setSessions] = useState([]);
   const [subs, setSubs] = useState({});
   const [attended, setAttended] = useState([]);
+  const [quizzes, setQuizzes] = useState([]);
+  const [attempts, setAttempts] = useState([]);
   const [latestAnn, setLatestAnn] = useState(null);
   const [latestRes, setLatestRes] = useState(null);
   const seenAnn = localStorage.getItem("seenAnn_" + profile.id) || "";
@@ -29,7 +32,8 @@ export default function TutorApp({ profile, onSignOut }) {
   const [loading, setLoading] = useState(true);
 
   async function load() {
-    const [course, mine, att, anns, ress] = await Promise.all([fetchCourse(), fetchMySubs(profile.id), fetchMyAttendance(profile.id), fetchAnnouncements(), fetchResources()]);
+    const [course, mine, att, anns, ress, qz, atp] = await Promise.all([fetchCourse(), fetchMySubs(profile.id), fetchMyAttendance(profile.id), fetchAnnouncements(), fetchResources(), fetchQuizzes(), fetchMyAttempts(profile.id)]);
+    setQuizzes(qz); setAttempts(atp);
     setSessions(course);
     const map = {}; mine.forEach((s) => (map[s.assignment_id] = s)); setSubs(map);
     setAttended(att);
@@ -39,9 +43,27 @@ export default function TutorApp({ profile, onSignOut }) {
   }
   useEffect(() => { load(); }, []);
 
+  function bestScoreFor(quizId) { let best = null; for (const a of attempts) { if (a.quiz_id === quizId) { if (!best || a.score > best.score) best = a; } } return best; }
+  function sessionQuiz(sid) { return quizzes.find((q) => q.session_id === sid); }
+  function sessionDone(s) {
+    if (s.assignments.length > 0) return s.assignments.every((a) => subs[a.id]);
+    const qz = sessionQuiz(s.id); if (!qz) return false;
+    const b = bestScoreFor(qz.id); return !!(b && b.passed);
+  }
+  // Option B progress: % of items submitted across the whole course
+  let itemsTotal = 0, itemsDone = 0;
+  for (const s of sessions) {
+    if (s.assignments.length > 0) {
+      itemsTotal += s.assignments.length;
+      itemsDone += s.assignments.filter((a) => subs[a.id]).length;
+    } else {
+      const qz = sessionQuiz(s.id);
+      if (qz) { itemsTotal += 1; const b = bestScoreFor(qz.id); if (b && b.passed) itemsDone += 1; }
+    }
+  }
   const total = sessions.length;
-  const completed = sessions.filter((s) => s.assignments.length > 0 && s.assignments.every((a) => subs[a.id])).length;
-  const pct = total ? Math.round((completed / total) * 100) : 0;
+  const completed = sessions.filter((s) => sessionDone(s)).length;
+  const pct = itemsTotal ? Math.round((itemsDone / itemsTotal) * 100) : 0;
   const nav = [
     { id: "form", label: "Pre-Course Form", icon: FileText, dot: !formDone },
     { id: "home", label: "Home", icon: HomeIcon },
@@ -66,9 +88,9 @@ export default function TutorApp({ profile, onSignOut }) {
     <Shell roleLabel="Tutor" roleColor={C.blue} nav={nav} tab={tab} setTab={(t) => { markSeen(t); setTab(t); setLesson(null); }} profile={profile} onSignOut={onSignOut}>
       {loading ? <Loading /> : (<>
         {tab === "form" && <PreCourseForm done={formDone} onDone={finishForm} />}
-        {tab === "home" && <TutorHome profile={profile} pct={pct} completed={completed} total={total} next={sessions.find((s) => !s.assignments.every((a) => subs[a.id]))} setTab={setTab} />}
-        {tab === "modules" && !lesson && <Modules sessions={sessions} subs={subs} open={setLesson} />}
-        {tab === "modules" && lesson && <Lesson session={sessions.find((s) => s.id === lesson)} subs={subs} onBack={() => setLesson(null)} onSubmit={onSubmit} />}
+        {tab === "home" && <TutorHome profile={profile} pct={pct} completed={completed} total={total} next={sessions.find((s) => !sessionDone(s))} setTab={setTab} />}
+        {tab === "modules" && !lesson && <Modules sessions={sessions} subs={subs} open={setLesson} isDone={sessionDone} />}
+        {tab === "modules" && lesson && <Lesson session={sessions.find((s) => s.id === lesson)} subs={subs} onBack={() => setLesson(null)} onSubmit={onSubmit} quiz={sessionQuiz(lesson)} bestAttempt={sessionQuiz(lesson) ? bestScoreFor(sessionQuiz(lesson).id) : null} uid={profile.id} onQuizPassed={load} />}
         {tab === "schedule" && <Schedule sessions={sessions} subs={subs} open={(id) => { setTab("modules"); setLesson(id); }} />}
         {tab === "studio" && <AIStudio sessions={sessions} />}
         {tab === "assignments" && <TutorAssignments sessions={sessions} subs={subs} open={(id) => { setTab("modules"); setLesson(id); }} />}
@@ -102,7 +124,7 @@ function TutorHome({ profile, pct, completed, total, next, setTab }) {
         <div className="rounded-3xl p-6 text-white" style={{ background: C.blue }}>
           <div className="text-sm font-bold uppercase tracking-wide">Next up</div>
           <div className="mt-2 text-lg font-extrabold">{next.week} · {next.title}</div>
-          <div className="mt-1 text-white/80 text-sm">{next.session_date ? `${next.session_date} · ` : ""}{next.session_time || "7:00 PM WAT"} · Zoom</div>
+          <div className="mt-1 text-white/80 text-sm">{[next.session_date, next.session_time, "Zoom"].filter(Boolean).join(" · ")}</div>
           <div className="mt-4 flex flex-wrap gap-2">
             {isSessionToday(next.session_date) && next.is_open && next.live_class_url && (
               <a href={next.live_class_url} target="_blank" rel="noreferrer" className="btn rounded-2xl px-4 py-2 text-sm font-black" style={{ background: C.yellow, color: C.ink }}>Join live class now</a>
@@ -115,7 +137,7 @@ function TutorHome({ profile, pct, completed, total, next, setTab }) {
   );
 }
 
-function Modules({ sessions, subs, open }) {
+function Modules({ sessions, subs, open, isDone }) {
   const weeks = [...new Set(sessions.map((s) => s.week))];
   const WC = [C.blue, C.red, C.purple, C.green, C.orange];
   return (
@@ -128,7 +150,7 @@ function Modules({ sessions, subs, open }) {
             <div className="mb-3"><span className="inline-flex items-center rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wide text-white" style={{ background: col }}>{wk}</span></div>
             <div className="space-y-2">
               {sessions.filter((s) => s.week === wk).map((s) => {
-                const done = s.assignments.length > 0 && s.assignments.every((a) => subs[a.id]);
+                const done = isDone ? isDone(s) : (s.assignments.length > 0 && s.assignments.every((a) => subs[a.id]));
                 const locked = !s.is_open;
                 const Tag = locked ? "div" : "button";
                 return (
@@ -170,7 +192,7 @@ function isSessionToday(dateStr) {
   return false;
 }
 
-function Lesson({ session, subs, onBack, onSubmit }) {
+function Lesson({ session, subs, onBack, onSubmit, quiz, bestAttempt, uid, onQuizPassed }) {
   if (!session) return null;
   const liveToday = isSessionToday(session.session_date) && session.is_open && session.live_class_url;
   const moduleLocked = !session.is_open;
@@ -217,6 +239,13 @@ function Lesson({ session, subs, onBack, onSubmit }) {
           <div className="mt-3 space-y-3">{session.assignments.map((a) => <AssignmentBlock key={a.id} a={a} existing={subs[a.id]} onSubmit={onSubmit} />)}</div>
         )}
       </div>
+
+      {quiz && quiz.questions?.length > 0 && (
+        <div className="mt-4 rounded-3xl p-5" style={{ background: C.card, border: `1px solid ${C.line}` }}>
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest" style={{ color: C.purple }}><ListChecks size={15} /> Knowledge check</div>
+          <div className="mt-3"><Quiz quiz={quiz} bestAttempt={bestAttempt} uid={uid} onDone={onQuizPassed} /></div>
+        </div>
+      )}
     </div>
   );
 }

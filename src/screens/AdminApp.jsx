@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import Shell from "./Shell.jsx";
 import { Header, Loading, Spinner } from "../components/ui.jsx";
 import { C } from "../theme";
-import { fetchProfiles, updateProfile, fetchCourse, saveSession, addSession, deleteSession, addAssignment, saveAssignment, deleteAssignment, fetchAnnouncements, postAnnouncement, fetchFacilitators, setSort, fetchResources, addResource, saveResource, deleteResource } from "../db";
+import { fetchProfiles, updateProfile, fetchCourse, saveSession, addSession, deleteSession, addAssignment, saveAssignment, deleteAssignment, fetchAnnouncements, postAnnouncement, fetchFacilitators, setSort, fetchResources, addResource, saveResource, deleteResource, fetchQuizzes, addQuiz, saveQuiz, deleteQuiz, addQuizQuestion, saveQuizQuestion, deleteQuizQuestion } from "../db";
 import { AnnouncementsList } from "./TutorApp.jsx";
 import Community from "./Community.jsx";
 import { Users, BookOpen, Megaphone, Check, X, Plus, Trash2, Lock, Unlock, Search, ChevronUp, ChevronDown, FolderOpen } from "lucide-react";
@@ -65,8 +65,9 @@ function Members() {
 function Content() {
   const [sessions, setSessions] = useState(null);
   const [facs, setFacs] = useState([]);
+  const [quizzes, setQuizzes] = useState([]);
   const [saving, setSaving] = useState(false);
-  async function load() { setSessions(await fetchCourse()); setFacs(await fetchFacilitators()); }
+  async function load() { setSessions(await fetchCourse()); setFacs(await fetchFacilitators()); setQuizzes(await fetchQuizzes()); }
   useEffect(() => { load(); }, []);
   const inp = { background: C.bg, border: `1px solid ${C.line}` };
   function edit(id, patch) { setSessions((ss) => ss.map((s) => (s.id === id ? { ...s, ...patch } : s))); }
@@ -118,7 +119,7 @@ function Content() {
               <textarea rows={3} value={(s.objectives || []).join("\n")} onChange={(e) => edit(s.id, { objectives: e.target.value.split("\n").filter((x) => x.trim()) })} placeholder="Objectives (one per line)" className="resize-none rounded-xl px-3 py-2 text-sm" style={inp} />
               <textarea rows={2} value={s.activity || ""} onChange={(e) => edit(s.id, { activity: e.target.value })} placeholder="In-session activity" className="resize-none rounded-xl px-3 py-2 text-sm" style={inp} />
               <div className="rounded-xl p-3" style={{ background: C.bg }}>
-                <div className="flex items-center justify-between mb-2"><div className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.red }}>Assignments ({s.assignments.length})</div><button onClick={() => newA(s.id)} className="btn inline-flex items-center gap-1 rounded-xl px-2.5 py-1 text-[11px] font-bold text-white" style={{ background: C.blue }}><Plus size={12} /> Add</button></div>
+                <div className="flex items-center justify-between mb-2"><div className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.red }}>Written assignments ({s.assignments.length})</div><button onClick={() => newA(s.id)} className="btn inline-flex items-center gap-1 rounded-xl px-2.5 py-1 text-[11px] font-bold text-white" style={{ background: C.blue }}><Plus size={12} /> Add</button></div>
                 <div className="space-y-2">
                   {s.assignments.map((a) => (
                     <div key={a.id} className="flex items-start gap-2 rounded-lg p-2" style={{ background: C.card, border: `1px solid ${C.line}` }}>
@@ -132,6 +133,7 @@ function Content() {
                   {s.assignments.length === 0 && <div className="text-xs" style={{ color: C.muted }}>No assignments yet.</div>}
                 </div>
               </div>
+              <QuizBox sessionId={s.id} quizzes={quizzes} reload={load} />
               <button onClick={() => save(s)} className="btn inline-flex w-max items-center gap-2 rounded-2xl px-5 py-2 text-sm font-bold text-white" style={{ background: C.ink }}>{saving ? <Spinner light /> : <Check size={15} />} Save session</button>
             </div>
           </div>
@@ -195,6 +197,77 @@ function AdminResources() {
           </div>
         ))}
         {rows.length === 0 && <div className="text-sm" style={{ color: C.muted }}>No resources yet.</div>}
+      </div>
+    </div>
+  );
+}
+
+
+function QuizBox({ sessionId, quizzes, reload }) {
+  const quiz = quizzes.find((q) => q.session_id === sessionId);
+  async function create() { await addQuiz(sessionId); reload(); }
+  async function remove() { if (!confirm("Delete this quiz and all its questions?")) return; await deleteQuiz(quiz.id); reload(); }
+  const inp = { background: C.card, border: `1px solid ${C.line}` };
+  if (!quiz) return (
+    <div className="rounded-xl p-3" style={{ background: C.bg }}>
+      <div className="flex items-center justify-between">
+        <div className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.purple }}>MCQ Quiz</div>
+        <button onClick={create} className="btn inline-flex items-center gap-1 rounded-xl px-2.5 py-1 text-[11px] font-bold text-white" style={{ background: C.purple }}><Plus size={12} /> Add quiz</button>
+      </div>
+      <div className="mt-1 text-xs" style={{ color: C.muted }}>Optional. Auto-marks at 70% pass mark. If this session has written assignments, those supersede the quiz.</div>
+    </div>
+  );
+  return <QuizEditor quiz={quiz} onDelete={remove} reload={reload} />;
+}
+
+function QuizEditor({ quiz, onDelete, reload }) {
+  const [title, setTitle] = useState(quiz.title);
+  const [qs, setQs] = useState(quiz.questions || []);
+  const inp = { background: C.card, border: `1px solid ${C.line}` };
+  async function saveTitle() { await saveQuiz({ ...quiz, title }); }
+  async function addQ(kind) { const q = await addQuizQuestion(quiz.id, kind, qs.length); setQs([...qs, q]); }
+  function editQ(id, patch) { setQs((arr) => arr.map((q) => (q.id === id ? { ...q, ...patch } : q))); }
+  async function saveQ(q) { await saveQuizQuestion(q); }
+  async function delQ(id) { await deleteQuizQuestion(id); setQs((arr) => arr.filter((q) => q.id !== id)); }
+  return (
+    <div className="rounded-xl p-3" style={{ background: C.bg }}>
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.purple }}>MCQ Quiz ({qs.length} question{qs.length === 1 ? "" : "s"} · pass at 70%)</div>
+        <div className="flex items-center gap-1">
+          <button onClick={() => addQ("mcq")} className="btn inline-flex items-center gap-1 rounded-xl px-2.5 py-1 text-[11px] font-bold text-white" style={{ background: C.purple }}><Plus size={12} /> MCQ</button>
+          <button onClick={() => addQ("tf")} className="btn inline-flex items-center gap-1 rounded-xl px-2.5 py-1 text-[11px] font-bold text-white" style={{ background: C.blue }}><Plus size={12} /> T/F</button>
+          <button onClick={onDelete}><Trash2 size={14} color={C.red} /></button>
+        </div>
+      </div>
+      <input value={title} onChange={(e) => setTitle(e.target.value)} onBlur={saveTitle} placeholder="Quiz title" className="w-full rounded-lg px-2.5 py-1.5 text-sm font-bold" style={inp} />
+      <div className="mt-2 space-y-2">
+        {qs.map((q, qi) => (
+          <div key={q.id} className="rounded-lg p-3" style={{ background: C.card, border: `1px solid ${C.line}` }}>
+            <div className="flex items-start gap-2">
+              <span className="text-xs font-bold" style={{ color: C.muted }}>{qi + 1}.</span>
+              <textarea rows={2} value={q.question} onChange={(e) => editQ(q.id, { question: e.target.value })} onBlur={() => saveQ(q)} placeholder="Question" className="flex-1 resize-none rounded-lg px-2 py-1.5 text-sm" style={{ background: C.bg, border: `1px solid ${C.line}` }} />
+              <button onClick={() => delQ(q.id)}><Trash2 size={13} color={C.red} /></button>
+            </div>
+            <div className="mt-2 space-y-1.5">
+              {q.options.map((opt, oi) => (
+                <div key={oi} className="flex items-center gap-2">
+                  <button onClick={() => { editQ(q.id, { correct: oi }); saveQ({ ...q, correct: oi }); }} title="Mark as correct answer" className="grid place-items-center h-6 w-6 rounded-full shrink-0" style={{ background: q.correct === oi ? C.green : C.bg, border: `2px solid ${q.correct === oi ? C.green : C.line}` }}>{q.correct === oi && <Check size={12} color="#fff" />}</button>
+                  {q.kind === "tf" ? (
+                    <div className="flex-1 text-sm font-semibold px-2 py-1">{opt}</div>
+                  ) : (
+                    <>
+                      <input value={opt} onChange={(e) => { const options = [...q.options]; options[oi] = e.target.value; editQ(q.id, { options }); }} onBlur={() => saveQ(q)} className="flex-1 rounded-lg px-2 py-1 text-sm" style={{ background: C.bg, border: `1px solid ${C.line}` }} placeholder={"Option " + String.fromCharCode(65 + oi)} />
+                      {q.options.length > 2 && <button onClick={() => { const options = q.options.filter((_, i) => i !== oi); const correct = q.correct === oi ? 0 : q.correct > oi ? q.correct - 1 : q.correct; editQ(q.id, { options, correct }); saveQ({ ...q, options, correct }); }}><X size={13} color={C.muted} /></button>}
+                    </>
+                  )}
+                </div>
+              ))}
+              {q.kind === "mcq" && q.options.length < 5 && <button onClick={() => { const options = [...q.options, "New option"]; editQ(q.id, { options }); saveQ({ ...q, options }); }} className="text-xs font-bold ml-8" style={{ color: C.blue }}>+ Add option</button>}
+            </div>
+            <div className="mt-1 text-[10px] font-bold uppercase" style={{ color: C.muted }}>Tap the circle next to an option to mark it correct.</div>
+          </div>
+        ))}
+        {qs.length === 0 && <div className="text-xs" style={{ color: C.muted }}>No questions yet — add MCQ or True/False above.</div>}
       </div>
     </div>
   );

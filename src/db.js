@@ -119,3 +119,38 @@ export async function saveResource(r) {
   if (error) throw error;
 }
 export async function deleteResource(id) { await supabase.from("resources").delete().eq("id", id); }
+
+// --- Quizzes ---
+export async function fetchQuizzes() {
+  const [{ data: quizzes }, { data: qs }] = await Promise.all([
+    supabase.from("quizzes").select("*").order("id"),
+    supabase.from("quiz_questions").select("*").order("sort"),
+  ]);
+  return (quizzes || []).map((z) => ({ ...z, questions: (qs || []).filter((q) => q.quiz_id === z.id) }));
+}
+export async function fetchMyAttempts(uid) {
+  const { data } = await supabase.from("quiz_attempts").select("*").eq("user_id", uid).order("created_at", { ascending: false });
+  return data || [];
+}
+export async function submitAttempt(quiz_id, user_id, score, passed, answers) {
+  const { error } = await supabase.from("quiz_attempts").insert({ quiz_id, user_id, score, passed, answers });
+  if (error) throw error;
+}
+export async function addQuiz(session_id) {
+  const { data, error } = await supabase.from("quizzes").insert({ session_id, title: "Session Quiz", pass_mark: 70 }).select().single();
+  if (error) throw error;
+  return data;
+}
+export async function saveQuiz(q) { await supabase.from("quizzes").update({ title: q.title }).eq("id", q.id); }
+export async function deleteQuiz(id) { await supabase.from("quizzes").delete().eq("id", id); }
+export async function addQuizQuestion(quiz_id, kind, sort) {
+  const q = kind === "tf"
+    ? { quiz_id, question: "New question", kind: "tf", options: ["True", "False"], correct: 0, sort }
+    : { quiz_id, question: "New question", kind: "mcq", options: ["Option A", "Option B", "Option C", "Option D"], correct: 0, sort };
+  const { data } = await supabase.from("quiz_questions").insert(q).select().single();
+  return data;
+}
+export async function saveQuizQuestion(q) {
+  await supabase.from("quiz_questions").update({ question: q.question, options: q.options, correct: q.correct, sort: q.sort }).eq("id", q.id);
+}
+export async function deleteQuizQuestion(id) { await supabase.from("quiz_questions").delete().eq("id", id); }
