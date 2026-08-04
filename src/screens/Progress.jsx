@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Header, Loading } from "../components/ui.jsx";
 import { C } from "../theme";
-import { fetchProfiles, fetchCourse, fetchQuizzes, fetchAllSubmissions, fetchAllAttempts, fetchAllAttendance } from "../db";
+import { fetchProfiles, fetchCourse, fetchQuizzes, fetchAllSubmissions, fetchAllAttempts, fetchAllAttendance, setAttendance } from "../db";
 import { AlertTriangle, ArrowLeft, ChevronRight, Search, CheckCircle2, Circle, XCircle, Copy } from "lucide-react";
 
 function daysSince(iso) {
@@ -15,6 +15,7 @@ export default function Progress() {
   const [data, setData] = useState(null);
   const [q, setQ] = useState("");
   const [openId, setOpenId] = useState(null);
+  const [view, setView] = useState("progress");
 
   useEffect(() => {
     (async () => {
@@ -65,8 +66,12 @@ export default function Progress() {
 
   return (
     <div className="fade-in">
-      <Header eyebrow="Cohort at a glance" title="Tutor progress" />
-      <p className="mt-2 text-sm" style={{ color: C.muted }}>{rows.length} enrolled tutor{rows.length === 1 ? "" : "s"}. {behindCount > 0 ? `${behindCount} may need a nudge.` : "Everyone's tracking well."}</p>
+      <Header eyebrow="Admin tools" title="Progress & Attendance" />
+      <div className="mt-4 inline-flex gap-1 rounded-2xl p-1" style={{ background: C.card, border: `1px solid ${C.line}` }}>
+        {[["progress", "Tutor progress"], ["attendance", "Mark attendance"]].map(([id, l]) => <button key={id} onClick={() => setView(id)} className="rounded-xl px-4 py-2 text-sm font-bold" style={view === id ? { background: C.ink, color: "#fff" } : { color: C.muted }}>{l}</button>)}
+      </div>
+      {view === "attendance" ? <AttendanceMarker data={data} /> : (<>
+      <p className="mt-4 text-sm" style={{ color: C.muted }}>{rows.length} enrolled tutor{rows.length === 1 ? "" : "s"}. {behindCount > 0 ? `${behindCount} may need a nudge.` : "Everyone's tracking well."}</p>
 
       <div className="mt-6 relative"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" color={C.muted} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or email…" className="w-full rounded-2xl pl-9 pr-4 py-2.5 text-sm" style={{ background: C.card, border: `1px solid ${C.line}` }} /></div>
 
@@ -91,6 +96,43 @@ export default function Progress() {
           );
         })}
         {shown.length === 0 && <div className="px-5 py-8 text-center text-sm" style={{ color: C.muted }}>No tutors found.</div>}
+      </div>
+      </>)}
+    </div>
+  );
+}
+
+function AttendanceMarker({ data }) {
+  const tutors = data.profiles.filter((p) => p.role === "tutor" && p.status === "enrolled");
+  const sessions = data.sessions;
+  const [sid, setSid] = useState(sessions[0]?.id);
+  const [att, setAtt] = useState(() => {
+    const m = {}; data.attend.forEach((r) => { m[r.session_id + ":" + r.tutor_id] = r.present; }); return m;
+  });
+  const [saving, setSaving] = useState(null);
+  async function mark(tid) {
+    const key = sid + ":" + tid; const now = !att[key];
+    setAtt((m) => ({ ...m, [key]: now })); setSaving(tid);
+    try { await setAttendance(sid, tid, now); } catch (e) { alert(e.message); }
+    setSaving(null);
+  }
+  const presentCount = tutors.filter((t) => att[sid + ":" + t.id]).length;
+  return (
+    <div className="mt-5">
+      <p className="text-sm" style={{ color: C.muted }}>Pick a session, then tap each tutor who attended. Saves instantly. This feeds the certificate.</p>
+      <select value={sid} onChange={(e) => setSid(Number(e.target.value))} className="mt-4 w-full rounded-2xl px-4 py-3 text-sm font-semibold" style={{ background: C.card, border: `1px solid ${C.line}` }}>
+        {sessions.map((s) => <option key={s.id} value={s.id}>Session {s.sort}: {s.title}</option>)}
+      </select>
+      <div className="mt-2 text-xs font-bold uppercase tracking-wide" style={{ color: C.muted }}>Present: {presentCount}/{tutors.length}</div>
+      <div className="mt-3 rounded-3xl overflow-hidden" style={{ background: C.card, border: `1px solid ${C.line}` }}>
+        {tutors.map((t) => { const on = att[sid + ":" + t.id]; return (
+          <button key={t.id} onClick={() => mark(t.id)} className="w-full flex items-center gap-3 px-5 py-3 text-left" style={{ borderTop: `1px solid ${C.line}` }}>
+            <span className="grid place-items-center h-6 w-6 rounded-full shrink-0" style={{ background: on ? C.green : "transparent", border: `2px solid ${on ? C.green : C.line}` }}>{on && <CheckCircle2 size={14} color="#fff" />}</span>
+            <span className="min-w-0 flex-1"><span className="block font-bold text-sm truncate">{t.full_name || "(no name)"}</span><span className="block text-xs truncate" style={{ color: C.muted }}>{t.whatsapp_number || t.email}</span></span>
+            <span className="text-[11px] font-bold" style={{ color: on ? C.green : C.muted }}>{saving === t.id ? "…" : on ? "Present" : "Tap to mark"}</span>
+          </button>
+        ); })}
+        {tutors.length === 0 && <div className="px-5 py-8 text-center text-sm" style={{ color: C.muted }}>No enrolled tutors yet.</div>}
       </div>
     </div>
   );
