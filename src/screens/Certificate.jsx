@@ -13,14 +13,14 @@ export default function Certificate({ profile, total, completed, attended }) {
   const [gen, setGen] = useState(!!profile.certificate_code);
   const [busy, setBusy] = useState(false);
   const svgRef = useRef(null);
-  const today = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  const today = new Date(profile.certificate_issued_at || Date.now()).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
   async function generate() {
     if (busy || !name.trim()) return; setBusy(true);
     const c = code || ("SOWT-" + Math.random().toString(36).slice(2, 8).toUpperCase());
     try { const l = await ai({ system: "Write ONE warm sentence (max 22 words) celebrating a tutor completing the Get Paid to Teach Online Masterclass by Stones of Wisdom Tutors. No quotes, just the sentence.", messages: [{ role: "user", content: `Name: ${name}` }], max_tokens: 120 }); setLine(l || ""); } catch (e) {}
     setCode(c); setGen(true);
-    try { await updateProfile(profile.id, { certificate_code: c, certificate_name: name }); } catch (e) {}
+    try { await updateProfile(profile.id, { certificate_code: c, certificate_name: name, certificate_issued_at: profile.certificate_issued_at || new Date().toISOString() }); } catch (e) {}
     setBusy(false);
   }
   function download() {
