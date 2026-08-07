@@ -34,7 +34,7 @@ export default function Certificate({ profile, total, completed, attended }) {
     };
     img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(xml)));
   }
-  const shareUrl = typeof window !== "undefined" ? window.location.origin : "";
+  const shareUrl = typeof window !== "undefined" ? (window.location.origin + (code ? "/?verify=" + encodeURIComponent(code) : "")) : "";
 
   if (!eligible) {
     return (
