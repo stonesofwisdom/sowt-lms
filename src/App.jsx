@@ -9,6 +9,7 @@ import TutorApp from "./screens/TutorApp.jsx";
 import AdminApp from "./screens/AdminApp.jsx";
 import FacilitatorApp from "./screens/FacilitatorApp.jsx";
 import Progress from "./screens/Progress.jsx";
+import Verify from "./screens/Verify.jsx";
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -42,6 +43,10 @@ export default function App() {
     });
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // Public certificate verification (no login needed): sowt-lms.netlify.app/?verify=CODE
+  const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  if (params && params.has("verify")) return <Verify initialCode={params.get("verify")} />;
 
   if (loading) return <div className="min-h-screen grid place-items-center"><div className="text-center"><Logo height={54} /><div className="mt-4"><Loading /></div></div></div>;
   if (recovery) return <ResetPassword onDone={() => setRecovery(false)} />;
