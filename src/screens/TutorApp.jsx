@@ -214,7 +214,7 @@ function Lesson({ session, subs, onBack, onSubmit, quiz, bestAttempt, uid, onQui
         {moduleLocked ? (
           <div className="text-white/70"><Lock size={30} className="mx-auto" /><div className="mt-2 text-sm font-semibold">Recording locked</div><div className="text-xs text-white/40">Available after the live session</div></div>
         ) : session.recording_url ? (
-          <div className="flex flex-col items-center gap-3"><a href={session.recording_url} target="_blank" rel="noreferrer" className="btn inline-flex items-center gap-2 rounded-2xl px-6 py-3 text-sm font-bold" style={{ background: C.yellow, color: C.ink }}><Play size={18} /> Watch recording</a>{session.recording_passcode && <div className="inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-bold text-white/90" style={{ background: "rgba(255,255,255,.1)" }}>Passcode: <span className="font-mono">{session.recording_passcode}</span><button onClick={() => { navigator.clipboard.writeText(session.recording_passcode); }} className="underline">copy</button></div>}</div>
+          <div className="flex flex-col items-center gap-3"><a href={session.recording_url} target="_blank" rel="noreferrer" className="btn inline-flex items-center gap-2 rounded-2xl px-6 py-3 text-sm font-bold" style={{ background: C.yellow, color: C.ink }}><Play size={18} /> Watch recording</a>{session.recording_passcode && <PasscodeChip pass={session.recording_passcode} />}</div>
         ) : (
           <div className="text-white/70"><Play size={28} className="mx-auto" /><div className="mt-2 text-sm">Recording link coming soon</div></div>
         )}
@@ -246,6 +246,17 @@ function Lesson({ session, subs, onBack, onSubmit, quiz, bestAttempt, uid, onQui
           <div className="mt-3"><Quiz quiz={quiz} bestAttempt={bestAttempt} uid={uid} onDone={onQuizPassed} /></div>
         </div>
       )}
+    </div>
+  );
+}
+
+function PasscodeChip({ pass }) {
+  const [copied, setCopied] = useState(false);
+  function copy() { navigator.clipboard.writeText(pass); setCopied(true); setTimeout(() => setCopied(false), 1500); }
+  return (
+    <div className="inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-bold text-white/90" style={{ background: "rgba(255,255,255,.1)" }}>
+      Passcode: <span className="font-mono">{pass}</span>
+      <button onClick={copy} className="underline">{copied ? "Copied!" : "copy"}</button>
     </div>
   );
 }
