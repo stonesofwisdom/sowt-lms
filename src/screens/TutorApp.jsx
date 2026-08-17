@@ -8,10 +8,11 @@ import Community from "./Community.jsx";
 import Schedule from "./Schedule.jsx";
 import AIStudio from "./AIStudio.jsx";
 import Certificate from "./Certificate.jsx";
+import ProfileEditor from "./ProfileEditor.jsx";
 import PreCourseForm from "./PreCourseForm.jsx";
 import ResourcesView from "./ResourcesView.jsx";
 import { ai, feedbackPrompt } from "../ai";
-import { Home as HomeIcon, BookOpen, ClipboardCheck, MessageSquare, Play, Lock, Sparkles, ArrowLeft, Megaphone, Check, CheckCircle2, Circle, Target, Calendar, Bot, Award, FileText, FolderOpen, ListChecks } from "lucide-react";
+import { Home as HomeIcon, BookOpen, ClipboardCheck, MessageSquare, Play, Lock, Sparkles, ArrowLeft, Megaphone, Check, CheckCircle2, Circle, Target, Calendar, Bot, Award, FileText, FolderOpen, ListChecks, UserCircle } from "lucide-react";
 
 export default function TutorApp({ profile, onSignOut }) {
   const [formDone, setFormDone] = useState(!!profile.form_done);
@@ -74,6 +75,7 @@ export default function TutorApp({ profile, onSignOut }) {
     { id: "community", label: "Community", icon: MessageSquare },
     { id: "resources", label: "Resources", icon: FolderOpen },
     { id: "certificate", label: "Certificate", icon: Award },
+    { id: "profile", label: "My Profile", icon: UserCircle },
   ];
   function markSeen(t) { if (t === "community" && latestAnn) localStorage.setItem("seenAnn_" + profile.id, latestAnn); if (t === "resources" && latestRes) localStorage.setItem("seenRes_" + profile.id, latestRes); }
 
@@ -88,7 +90,7 @@ export default function TutorApp({ profile, onSignOut }) {
     <Shell roleLabel="Tutor" roleColor={C.blue} nav={nav} tab={tab} setTab={(t) => { markSeen(t); setTab(t); setLesson(null); }} profile={profile} onSignOut={onSignOut}>
       {loading ? <Loading /> : (<>
         {tab === "form" && <PreCourseForm done={formDone} onDone={finishForm} />}
-        {tab === "home" && <TutorHome profile={profile} pct={pct} completed={completed} total={total} next={sessions.find((s) => !sessionDone(s))} setTab={setTab} />}
+        {tab === "home" && <TutorHome profile={profile} pct={pct} completed={completed} total={total} next={nextByDate(sessions)} setTab={setTab} onContinue={() => { const t = sessions.find((x) => !sessionDone(x) && x.is_open); if (t) { setTab("modules"); setLesson(t.id); } else { setTab("modules"); } }} />}
         {tab === "modules" && !lesson && <Modules sessions={sessions} subs={subs} open={setLesson} isDone={sessionDone} />}
         {tab === "modules" && lesson && <Lesson session={sessions.find((s) => s.id === lesson)} subs={subs} onBack={() => setLesson(null)} onSubmit={onSubmit} quiz={sessionQuiz(lesson)} bestAttempt={sessionQuiz(lesson) ? bestScoreFor(sessionQuiz(lesson).id) : null} uid={profile.id} onQuizPassed={load} />}
         {tab === "schedule" && <Schedule sessions={sessions} subs={subs} open={(id) => { setTab("modules"); setLesson(id); }} />}
@@ -97,6 +99,7 @@ export default function TutorApp({ profile, onSignOut }) {
         {tab === "community" && <Community profile={profile} canAnnounce={false} />}
         {tab === "resources" && <ResourcesView />}
         {tab === "certificate" && <Certificate profile={profile} total={sessions.length} completed={completed} attended={attended.length} />}
+        {tab === "profile" && <ProfileEditor profile={profile} />}
         {tab === "form" && <PreCourseForm done={formDone} onDone={finishForm} />}
         {tab === "resources" && <ResourcesView />}
       </>)}
@@ -104,7 +107,7 @@ export default function TutorApp({ profile, onSignOut }) {
   );
 }
 
-function TutorHome({ profile, pct, completed, total, next, setTab }) {
+function TutorHome({ profile, pct, completed, total, next, setTab, onContinue }) {
   const first = String(profile.full_name || "there").split(" ")[0];
   return (
     <div className="fade-in space-y-4">
@@ -113,7 +116,7 @@ function TutorHome({ profile, pct, completed, total, next, setTab }) {
           <div className="text-[11px] font-bold uppercase tracking-widest" style={{ color: C.blue }}>Get Paid to Teach Online · Masterclass</div>
           <h1 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">Welcome back, {first} 👋</h1>
           <p className="mt-2 text-sm max-w-lg" style={{ color: C.muted }}>10 live sessions, 16 topics, and a Certificate of Completion — all in one place.</p>
-          <button onClick={() => setTab("modules")} className="btn mt-5 rounded-2xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.blue }}>Continue learning</button>
+          <button onClick={onContinue} className="btn mt-5 rounded-2xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.blue }}>Continue learning</button>
         </div>
         <div className="shrink-0 self-start grid place-items-center rounded-3xl px-6 py-4" style={{ background: "#EEF0FE" }}>
           <div className="text-3xl font-extrabold" style={{ color: C.blue }}>{pct}%</div>
@@ -167,6 +170,29 @@ function Modules({ sessions, subs, open, isDone }) {
       </div>
     </div>
   );
+}
+
+function parseSessionDate(dateStr) {
+  if (!dateStr) return null;
+  const s = String(dateStr).trim();
+  let d = new Date(s);
+  if (!isNaN(d)) return d;
+  const parts = s.replace(/[-.]/g, "/").split("/");
+  if (parts.length === 3) {
+    let [a, b, c] = parts.map((x) => parseInt(x, 10));
+    if (c < 100) c += 2000;
+    d = new Date(c, b - 1, a); // assume day/month/year
+    if (!isNaN(d)) return d;
+  }
+  return null;
+}
+function nextByDate(sessions) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const dated = sessions
+    .map((s) => ({ s, d: parseSessionDate(s.session_date) }))
+    .filter((x) => x.d && x.d.getTime() >= today.getTime())
+    .sort((a, b) => a.d - b.d);
+  return dated.length ? dated[0].s : null;
 }
 
 function isSessionToday(dateStr) {
