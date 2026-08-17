@@ -5,8 +5,8 @@ import { updateProfile } from "../db";
 import { ai } from "../ai";
 import { Lock, Award, Download, Linkedin, Check } from "lucide-react";
 
-export default function Certificate({ profile, total, completed, attended }) {
-  const eligible = profile.certificate_unlocked || (total > 0 && completed >= total && attended >= total);
+export default function Certificate({ profile, total, completed }) {
+  const eligible = profile.certificate_unlocked || (total > 0 && completed >= total);
   const [name, setName] = useState(profile.certificate_name || profile.full_name || "");
   const [code, setCode] = useState(profile.certificate_code || "");
   const [line, setLine] = useState("");
@@ -43,10 +43,9 @@ export default function Certificate({ profile, total, completed, attended }) {
         <div className="mt-6 rounded-3xl p-8 text-center" style={{ background: C.card, border: `1px solid ${C.line}` }}>
           <div className="mx-auto grid place-items-center h-16 w-16 rounded-2xl" style={{ background: "#EDEAE0" }}><Lock size={26} color="#9A947F" /></div>
           <div className="mt-4 text-lg font-black">Your certificate is locked</div>
-          <p className="mt-1 text-sm max-w-sm mx-auto" style={{ color: C.muted }}>Unlock it by completing every session's assignments and attending all the live classes.</p>
-          <div className="mt-5 grid grid-cols-2 gap-3 max-w-xs mx-auto">
-            <div className="rounded-2xl p-3" style={{ background: C.bg }}><div className="text-2xl font-extrabold" style={{ color: C.blue }}>{completed}/{total}</div><div className="text-[11px] font-bold uppercase" style={{ color: C.muted }}>Sessions done</div></div>
-            <div className="rounded-2xl p-3" style={{ background: C.bg }}><div className="text-2xl font-extrabold" style={{ color: C.green }}>{attended}/{total}</div><div className="text-[11px] font-bold uppercase" style={{ color: C.muted }}>Attended</div></div>
+          <p className="mt-1 text-sm max-w-sm mx-auto" style={{ color: C.muted }}>Unlock it by completing every session's assignments and quizzes.</p>
+          <div className="mt-5 max-w-xs mx-auto">
+            <div className="rounded-2xl p-4" style={{ background: C.bg }}><div className="text-3xl font-extrabold" style={{ color: C.blue }}>{completed}/{total}</div><div className="text-[11px] font-bold uppercase mt-0.5" style={{ color: C.muted }}>Sessions complete</div></div>
           </div>
         </div>
       </div>
@@ -55,7 +54,7 @@ export default function Certificate({ profile, total, completed, attended }) {
   return (
     <div className="fade-in">
       <Header eyebrow="The finish line" title="Certificate of Completion" />
-      <p className="mt-3 text-sm" style={{ color: C.muted }}>You did it — all sessions complete and attended. Generate your certificate below.</p>
+      <p className="mt-3 text-sm" style={{ color: C.muted }}>You did it — all sessions complete. Generate your certificate below.</p>
       <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
         <div><label className="text-xs font-bold uppercase" style={{ color: C.muted }}>Name on certificate</label><input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 w-full rounded-2xl px-4 py-3 text-sm font-semibold" style={{ background: C.card, border: `1px solid ${C.line}` }} /></div>
         <button onClick={generate} disabled={busy || !name.trim()} className="btn inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3 text-sm font-bold text-white" style={{ background: C.blue, opacity: busy || !name.trim() ? 0.6 : 1 }}>{busy ? <Spinner light /> : <Award size={16} />}{gen ? "Regenerate" : "Generate my certificate"}</button>
