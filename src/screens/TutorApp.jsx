@@ -8,11 +8,10 @@ import Community from "./Community.jsx";
 import Schedule from "./Schedule.jsx";
 import AIStudio from "./AIStudio.jsx";
 import Certificate from "./Certificate.jsx";
-import ProfileEditor from "./ProfileEditor.jsx";
 import PreCourseForm from "./PreCourseForm.jsx";
 import ResourcesView from "./ResourcesView.jsx";
 import { ai, feedbackPrompt } from "../ai";
-import { Home as HomeIcon, BookOpen, ClipboardCheck, MessageSquare, Play, Lock, Sparkles, ArrowLeft, Megaphone, Check, CheckCircle2, Circle, Target, Calendar, Bot, Award, FileText, FolderOpen, ListChecks, UserCircle } from "lucide-react";
+import { Home as HomeIcon, BookOpen, ClipboardCheck, MessageSquare, Play, Lock, Sparkles, ArrowLeft, Megaphone, Check, CheckCircle2, Circle, Target, Calendar, Bot, Award, FileText, FolderOpen, ListChecks } from "lucide-react";
 
 export default function TutorApp({ profile, onSignOut }) {
   const [formDone, setFormDone] = useState(!!profile.form_done);
@@ -47,19 +46,23 @@ export default function TutorApp({ profile, onSignOut }) {
   function bestScoreFor(quizId) { let best = null; for (const a of attempts) { if (a.quiz_id === quizId) { if (!best || a.score > best.score) best = a; } } return best; }
   function sessionQuiz(sid) { return quizzes.find((q) => q.session_id === sid); }
   function sessionDone(s) {
-    if (s.assignments.length > 0) return s.assignments.every((a) => subs[a.id]);
-    const qz = sessionQuiz(s.id); if (!qz) return false;
-    const b = bestScoreFor(qz.id); return !!(b && b.passed);
+    const hasAssign = Array.isArray(s.assignments) && s.assignments.length > 0;
+    if (hasAssign) return s.assignments.every((a) => subs[a.id]);
+    const qz = sessionQuiz(s.id);
+    const hasQuiz = qz && Array.isArray(qz.questions) && qz.questions.length > 0;
+    if (hasQuiz) { const b = bestScoreFor(qz.id); return !!(b && b.passed); }
+    return true; // no real task -> counts as complete
   }
   // Option B progress: % of items submitted across the whole course
   let itemsTotal = 0, itemsDone = 0;
   for (const s of sessions) {
-    if (s.assignments.length > 0) {
+    const hasAssign = Array.isArray(s.assignments) && s.assignments.length > 0;
+    if (hasAssign) {
       itemsTotal += s.assignments.length;
       itemsDone += s.assignments.filter((a) => subs[a.id]).length;
     } else {
       const qz = sessionQuiz(s.id);
-      if (qz) { itemsTotal += 1; const b = bestScoreFor(qz.id); if (b && b.passed) itemsDone += 1; }
+      if (qz && Array.isArray(qz.questions) && qz.questions.length > 0) { itemsTotal += 1; const b = bestScoreFor(qz.id); if (b && b.passed) itemsDone += 1; }
     }
   }
   const total = sessions.length;
@@ -75,7 +78,6 @@ export default function TutorApp({ profile, onSignOut }) {
     { id: "community", label: "Community", icon: MessageSquare },
     { id: "resources", label: "Resources", icon: FolderOpen },
     { id: "certificate", label: "Certificate", icon: Award },
-    { id: "profile", label: "My Profile", icon: UserCircle },
   ];
   function markSeen(t) { if (t === "community" && latestAnn) localStorage.setItem("seenAnn_" + profile.id, latestAnn); if (t === "resources" && latestRes) localStorage.setItem("seenRes_" + profile.id, latestRes); }
 
@@ -99,7 +101,6 @@ export default function TutorApp({ profile, onSignOut }) {
         {tab === "community" && <Community profile={profile} canAnnounce={false} />}
         {tab === "resources" && <ResourcesView />}
         {tab === "certificate" && <Certificate profile={profile} total={sessions.length} completed={completed} attended={attended.length} />}
-        {tab === "profile" && <ProfileEditor profile={profile} />}
         {tab === "form" && <PreCourseForm done={formDone} onDone={finishForm} />}
         {tab === "resources" && <ResourcesView />}
       </>)}
@@ -115,7 +116,7 @@ function TutorHome({ profile, pct, completed, total, next, setTab, onContinue })
         <div className="flex-1">
           <div className="text-[11px] font-bold uppercase tracking-widest" style={{ color: C.blue }}>Get Paid to Teach Online · Masterclass</div>
           <h1 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">Welcome back, {first} 👋</h1>
-          <p className="mt-2 text-sm max-w-lg" style={{ color: C.muted }}>10 live sessions, 16 topics, and a Certificate of Completion — all in one place.</p>
+          <p className="mt-2 text-sm max-w-lg" style={{ color: C.muted }}>{total} live sessions and a Certificate of Completion — all in one place.</p>
           <button onClick={onContinue} className="btn mt-5 rounded-2xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.blue }}>Continue learning</button>
         </div>
         <div className="shrink-0 self-start grid place-items-center rounded-3xl px-6 py-4" style={{ background: "#EEF0FE" }}>
