@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import Shell from "./Shell.jsx";
 import { Header, Loading, Spinner } from "../components/ui.jsx";
 import { C } from "../theme";
-import { fetchCourse, fetchMySubs, submitAnswer, fetchMyAttendance, updateProfile, fetchAnnouncements, fetchResources, fetchQuizzes, fetchMyAttempts } from "../db";
+import { fetchCourse, fetchMySubs, submitAnswer, fetchMyAttendance, updateProfile, fetchAnnouncements, fetchResources, fetchQuizzes, fetchMyAttempts, uploadSubmissionFile } from "../db";
 import Quiz from "./Quiz.jsx";
 import Community from "./Community.jsx";
 import Schedule from "./Schedule.jsx";
@@ -11,7 +11,7 @@ import Certificate from "./Certificate.jsx";
 import PreCourseForm from "./PreCourseForm.jsx";
 import ResourcesView from "./ResourcesView.jsx";
 import { ai, feedbackPrompt } from "../ai";
-import { Home as HomeIcon, BookOpen, ClipboardCheck, MessageSquare, Play, Lock, Sparkles, ArrowLeft, Megaphone, Check, CheckCircle2, Circle, Target, Calendar, Bot, Award, FileText, FolderOpen, ListChecks } from "lucide-react";
+import { Home as HomeIcon, BookOpen, ClipboardCheck, MessageSquare, Play, Lock, Sparkles, ArrowLeft, Megaphone, Check, CheckCircle2, Circle, Target, Calendar, Bot, Award, FileText, FolderOpen, ListChecks, Paperclip, X, Image as ImageIcon } from "lucide-react";
 
 export default function TutorApp({ profile, onSignOut }) {
   const [formDone, setFormDone] = useState(!!profile.form_done);
@@ -81,9 +81,9 @@ export default function TutorApp({ profile, onSignOut }) {
   ];
   function markSeen(t) { if (t === "community" && latestAnn) localStorage.setItem("seenAnn_" + profile.id, latestAnn); if (t === "resources" && latestRes) localStorage.setItem("seenRes_" + profile.id, latestRes); }
 
-  async function onSubmit(a, text) {
-    const fb = await ai(feedbackPrompt(a.title, a.prompt, text));
-    const row = await submitAnswer(a.id, profile.id, text, fb);
+  async function onSubmit(a, text, fileUrl, fileName) {
+    const fb = text && text.trim() ? await ai(feedbackPrompt(a.title, a.prompt, text)) : "";
+    const row = await submitAnswer(a.id, profile.id, text, fb, fileUrl ?? null, fileName ?? null);
     setSubs((m) => ({ ...m, [a.id]: row }));
     return fb;
   }
@@ -263,7 +263,7 @@ function Lesson({ session, subs, onBack, onSubmit, quiz, bestAttempt, uid, onQui
         ) : session.assignments.length === 0 ? (
           <div className="mt-3 text-sm" style={{ color: C.muted }}>No assignments set for this session yet.</div>
         ) : (
-          <div className="mt-3 space-y-3">{session.assignments.map((a) => <AssignmentBlock key={a.id} a={a} existing={subs[a.id]} onSubmit={onSubmit} />)}</div>
+          <div className="mt-3 space-y-3">{session.assignments.map((a) => <AssignmentBlock key={a.id} a={a} existing={subs[a.id]} onSubmit={onSubmit} uid={uid} />)}</div>
         )}
       </div>
 
@@ -288,15 +288,41 @@ function PasscodeChip({ pass }) {
   );
 }
 
-function AssignmentBlock({ a, existing, onSubmit }) {
+function AssignmentBlock({ a, existing, onSubmit, uid }) {
   const [text, setText] = useState(existing?.content || "");
   const [fb, setFb] = useState(existing?.feedback || "");
   const [busy, setBusy] = useState(false);
+  const [fileUrl, setFileUrl] = useState(existing?.file_url || null);
+  const [fileName, setFileName] = useState(existing?.file_name || null);
+  const [uploading, setUploading] = useState(false);
+  const [err, setErr] = useState("");
+  const inputRef = React.useRef(null);
   const submitted = !!existing;
-  async function go() {
-    if (!text.trim() || busy) return; setBusy(true); setFb("");
-    try { const r = await onSubmit(a, text); setFb(r); } finally { setBusy(false); }
+  const canSend = (text.trim() || fileUrl) && !busy && !uploading;
+  const isImg = fileName && /\.(png|jpe?g|gif|webp)$/i.test(fileName);
+
+  async function pick(e) {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    setErr("");
+    const okType = /^image\//.test(f.type) || f.type === "application/pdf";
+    if (!okType) { setErr("Please attach an image or a PDF."); return; }
+    if (f.size > 10 * 1024 * 1024) { setErr("File is too large (max 10MB)."); return; }
+    setUploading(true);
+    try {
+      const r = await uploadSubmissionFile(uid, a.id, f);
+      setFileUrl(r.url); setFileName(r.name);
+    } catch (e2) { setErr(e2.message || "Upload failed. Try again."); }
+    setUploading(false);
+    if (inputRef.current) inputRef.current.value = "";
   }
+  function removeFile() { setFileUrl(null); setFileName(null); setErr(""); }
+
+  async function go() {
+    if (!canSend) return; setBusy(true); setFb("");
+    try { const r = await onSubmit(a, text, fileUrl, fileName); setFb(r); } finally { setBusy(false); }
+  }
+
   return (
     <div className="rounded-2xl p-4" style={{ background: C.bg, border: `1px solid ${C.line}` }}>
       <div className="flex items-center gap-2">
@@ -305,8 +331,24 @@ function AssignmentBlock({ a, existing, onSubmit }) {
         {submitted && <span className="ml-auto text-[11px] font-bold" style={{ color: C.blue }}>Submitted</span>}
       </div>
       <p className="mt-2 text-sm" style={{ color: C.muted }}>{a.prompt}</p>
-      <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="Type your answer…" className="mt-2 w-full resize-none rounded-xl px-3 py-2 text-sm" style={{ background: C.card, border: `1px solid ${C.line}` }} />
-      <button onClick={go} disabled={busy || !text.trim()} className="btn mt-2 inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-bold text-white" style={{ background: C.ink, opacity: busy || !text.trim() ? 0.55 : 1 }}>{busy ? <Spinner light /> : <Sparkles size={15} color={C.yellow} />}{busy ? "Reviewing…" : submitted ? "Resubmit" : "Submit for feedback"}</button>
+      <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="Type your answer (optional if you attach a file)…" className="mt-2 w-full resize-none rounded-xl px-3 py-2 text-sm" style={{ background: C.card, border: `1px solid ${C.line}` }} />
+
+      <input ref={inputRef} type="file" accept="image/*,application/pdf" onChange={pick} className="hidden" />
+      {!fileUrl && (
+        <button onClick={() => inputRef.current && inputRef.current.click()} disabled={uploading} className="btn mt-2 inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-xs font-bold" style={{ background: C.card, border: `1px solid ${C.line}`, color: C.ink }}>
+          {uploading ? <Spinner /> : <Paperclip size={14} />}{uploading ? "Uploading…" : "Attach photo or PDF"}
+        </button>
+      )}
+      {fileUrl && (
+        <div className="mt-2 flex items-center gap-2 rounded-xl px-3 py-2" style={{ background: C.card, border: `1px solid ${C.line}` }}>
+          {isImg ? <ImageIcon size={16} color={C.blue} /> : <FileText size={16} color={C.red} />}
+          <a href={fileUrl} target="_blank" rel="noreferrer" className="text-xs font-bold truncate flex-1" style={{ color: C.blue }}>{fileName || "Attached file"}</a>
+          <button onClick={removeFile} className="shrink-0" title="Remove"><X size={15} color={C.muted} /></button>
+        </div>
+      )}
+      {err && <div className="mt-2 text-xs font-bold" style={{ color: C.red }}>{err}</div>}
+
+      <button onClick={go} disabled={!canSend} className="btn mt-2 inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-bold text-white" style={{ background: C.ink, opacity: canSend ? 1 : 0.55 }}>{busy ? <Spinner light /> : <Sparkles size={15} color={C.yellow} />}{busy ? "Submitting…" : submitted ? "Resubmit" : "Submit"}</button>
       {fb && <div className="fade-in mt-3 rounded-xl p-3 text-sm leading-relaxed whitespace-pre-wrap" style={{ background: "#FFF9DC", border: `1px solid ${C.yellow}` }}><div className="mb-1 text-xs font-bold uppercase" style={{ color: C.red }}>AI feedback</div>{fb}</div>}
     </div>
   );
