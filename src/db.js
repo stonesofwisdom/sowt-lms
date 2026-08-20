@@ -11,12 +11,26 @@ export async function fetchMySubs(uid) {
   const { data } = await supabase.from("submissions").select("*").eq("user_id", uid);
   return data || [];
 }
-export async function submitAnswer(assignment_id, user_id, content, feedback) {
+export async function submitAnswer(assignment_id, user_id, content, feedback, file_url, file_name) {
+  const row = { assignment_id, user_id, content, feedback, status: "new" };
+  if (file_url !== undefined) row.file_url = file_url;
+  if (file_name !== undefined) row.file_name = file_name;
   const { data, error } = await supabase.from("submissions")
-    .upsert({ assignment_id, user_id, content, feedback, status: "new" }, { onConflict: "assignment_id,user_id" })
+    .upsert(row, { onConflict: "assignment_id,user_id" })
     .select().single();
   if (error) throw error;
   return data;
+}
+
+// Upload an assignment file (image/pdf) to the public "submissions" bucket.
+export async function uploadSubmissionFile(user_id, assignment_id, file) {
+  const ext = (file.name.split(".").pop() || "dat").toLowerCase();
+  const rand = Math.random().toString(36).slice(2, 10);
+  const path = `${user_id}/${assignment_id}-${Date.now()}-${rand}.${ext}`;
+  const { error } = await supabase.storage.from("submissions").upload(path, file, { upsert: true, contentType: file.type || undefined });
+  if (error) throw error;
+  const { data } = supabase.storage.from("submissions").getPublicUrl(path);
+  return { url: data.publicUrl, name: file.name };
 }
 export async function fetchAnnouncements() {
   const { data } = await supabase.from("announcements").select("*").order("created_at", { ascending: false });
