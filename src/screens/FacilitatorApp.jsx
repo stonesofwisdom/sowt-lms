@@ -8,7 +8,7 @@ import AIStudio from "./AIStudio.jsx";
 import Schedule from "./Schedule.jsx";
 import ResourcesView from "./ResourcesView.jsx";
 import { ai, feedbackPrompt } from "../ai";
-import { BookOpen, ClipboardCheck, MessageSquare, Lock, Unlock, Check, ArrowLeft, Sparkles, CheckCircle2, Circle, Calendar, Bot, FolderOpen } from "lucide-react";
+import { BookOpen, ClipboardCheck, MessageSquare, Lock, Unlock, Check, ArrowLeft, Sparkles, CheckCircle2, Circle, Calendar, Bot, FolderOpen , FileText, Image as ImageIcon, Paperclip } from "lucide-react";
 
 export default function FacilitatorApp({ profile, onSignOut }) {
   const [tab, setTab] = useState("sessions");
@@ -120,7 +120,15 @@ function Submissions({ me }) {
       <div className="mt-4 rounded-3xl p-5" style={{ background: C.card, border: `1px solid ${C.line}` }}>
         <div className="text-xs font-bold uppercase" style={{ color: C.muted }}>{sub.assignments?.title}</div>
         <p className="mt-1 text-sm" style={{ color: C.muted }}>{sub.assignments?.prompt}</p>
-        <div className="mt-3 rounded-2xl p-4 text-sm leading-relaxed" style={{ background: C.bg, border: `1px solid ${C.line}` }}>{sub.content}</div>
+        {sub.content && <div className="mt-3 rounded-2xl p-4 text-sm leading-relaxed" style={{ background: C.bg, border: `1px solid ${C.line}` }}>{sub.content}</div>}
+        {sub.file_url && (
+          <div className="mt-3">
+            <div className="text-xs font-bold uppercase mb-1" style={{ color: C.muted }}>Attached file</div>
+            {/\.(png|jpe?g|gif|webp)$/i.test(sub.file_name || sub.file_url)
+              ? <a href={sub.file_url} target="_blank" rel="noreferrer"><img src={sub.file_url} alt={sub.file_name || "submission"} className="rounded-2xl max-h-96 w-auto" style={{ border: `1px solid ${C.line}` }} /></a>
+              : <a href={sub.file_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold" style={{ background: C.bg, border: `1px solid ${C.line}`, color: C.blue }}><FileText size={16} color={C.red} /> {sub.file_name || "Open PDF"}</a>}
+          </div>
+        )}
       </div>
       <div className="mt-4 rounded-3xl p-5" style={{ background: C.card, border: `1px solid ${C.line}` }}>
         <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -148,4 +156,3 @@ function Submissions({ me }) {
     </div>
   );
 }
-
