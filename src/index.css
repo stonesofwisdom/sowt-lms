@@ -11,3 +11,7 @@ button, input, textarea, select { font-family: inherit; }
 .lift { transition: transform .15s ease, box-shadow .15s ease; }
 .lift:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(20,20,20,.08); }
 @media (prefers-reduced-motion: reduce) { .fade-in, .lift { animation: none; transition: none; } }
+[data-preserve-lines],
+.preserve-lines {
+  white-space: pre-wrap;
+}
