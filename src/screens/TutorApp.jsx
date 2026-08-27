@@ -264,14 +264,7 @@ function Lesson({ session, subs, onBack, onSubmit, quiz, bestAttempt, uid, onQui
         )}
       </div>
 
-      {session.description && <p className="mt-6 text-[15px] leading-relaxed">{session.description}</p>}
-
-      {session.objectives?.length > 0 && (
-        <div className="mt-6 rounded-3xl p-5" style={{ background: C.card, border: `1px solid ${C.line}` }}>
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest" style={{ color: C.blue }}><Target size={15} /> What you'll be able to do</div>
-          <ul className="mt-3 space-y-2">{session.objectives.map((o, i) => <li key={i} className="flex items-start gap-2 text-sm"><CheckCircle2 size={17} color={C.blue} className="mt-0.5 shrink-0" /><span>{o}</span></li>)}</ul>
-        </div>
-      )}
+      <LessonInfoTabs description={session.description} objectives={session.objectives} />
 
       <div className="mt-4 rounded-3xl p-5" style={{ background: C.card, border: `1px solid ${C.line}` }}>
         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest" style={{ color: C.red }}><ClipboardCheck size={15} /> Assignments</div>
@@ -288,6 +281,32 @@ function Lesson({ session, subs, onBack, onSubmit, quiz, bestAttempt, uid, onQui
         <div className="mt-4 rounded-3xl p-5" style={{ background: C.card, border: `1px solid ${C.line}` }}>
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest" style={{ color: C.purple }}><ListChecks size={15} /> Knowledge check</div>
           <div className="mt-3"><Quiz quiz={quiz} bestAttempt={bestAttempt} uid={uid} onDone={onQuizPassed} /></div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LessonInfoTabs({ description, objectives }) {
+  const tabs = [];
+  if (description) tabs.push("Overview");
+  if (objectives && objectives.length > 0) tabs.push("Objectives");
+  const [active, setActive] = useState(tabs[0] || null);
+  if (tabs.length === 0) return null;
+  return (
+    <div className="mt-6 rounded-3xl p-5" style={{ background: C.card, border: `1px solid ${C.line}` }}>
+      {tabs.length > 1 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {tabs.map((t) => (
+            <button key={t} onClick={() => setActive(t)} className="btn rounded-full px-4 py-2 text-sm font-bold" style={active === t ? { background: C.ink, color: "#fff" } : { background: C.bg, color: C.muted }}>{t}</button>
+          ))}
+        </div>
+      )}
+      {active === "Overview" && <p className="text-[15px] leading-relaxed">{description}</p>}
+      {active === "Objectives" && (
+        <div>
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest mb-3" style={{ color: C.blue }}><Target size={15} /> What you'll be able to do</div>
+          <ul className="space-y-2">{objectives.map((o, i) => <li key={i} className="flex items-start gap-2 text-sm"><CheckCircle2 size={17} color={C.blue} className="mt-0.5 shrink-0" /><span>{o}</span></li>)}</ul>
         </div>
       )}
     </div>
