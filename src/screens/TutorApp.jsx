@@ -158,16 +158,27 @@ function Modules({ sessions, subs, open, isDone }) {
         {weeks.map((wk, wi) => { const col = WC[wi % WC.length]; return (
           <div key={wk}>
             <div className="mb-3"><span className="inline-flex items-center rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wide text-white" style={{ background: col }}>{wk}</span></div>
-            <div className="space-y-2">
+            <div className="grid sm:grid-cols-2 gap-3">
               {sessions.filter((s) => s.week === wk).map((s) => {
                 const done = isDone ? isDone(s) : (s.assignments.length > 0 && s.assignments.every((a) => subs[a.id]));
                 const locked = !s.is_open;
                 const Tag = locked ? "div" : "button";
+                const meta = [s.session_date, s.session_time].filter(Boolean).join(" · ");
+                const bannerBg = locked ? "linear-gradient(135deg, #9A968A 0%, #6B6B6B 100%)" : `linear-gradient(135deg, ${col} 0%, #0E1A3A 100%)`;
+                const status = locked ? "Locked" : done ? "Completed" : "Open";
                 return (
-                  <Tag key={s.id} onClick={locked ? undefined : () => open(s.id)} className={(locked ? "" : "lift ") + "w-full flex items-center gap-4 rounded-2xl p-4 text-left"} style={{ background: C.card, border: `1px solid ${C.line}`, borderLeft: `5px solid ${locked ? "#D7D2C4" : col}`, opacity: locked ? 0.85 : 1, cursor: locked ? "default" : "pointer" }}>
-                    <span>{locked ? <Lock size={24} color="#B9B4A5" /> : done ? <CheckCircle2 size={26} color={col} /> : <Circle size={26} color="#CFCABA" />}</span>
-                    <span className="min-w-0 flex-1"><span className="block text-[11px] font-bold uppercase tracking-wide" style={{ color: C.muted }}>Session {s.sort}{locked ? " · Locked" : ""}</span><span className="block font-bold leading-snug">{s.title}</span></span>
-                    <span className="ml-auto text-xs font-bold" style={{ color: locked ? C.muted : col }}>{locked ? "Opens after live class" : "Open"}</span>
+                  <Tag key={s.id} onClick={locked ? undefined : () => open(s.id)} className={(locked ? "" : "lift ") + "group w-full overflow-hidden rounded-3xl text-left flex flex-col"} style={{ background: C.card, border: `1px solid ${C.line}`, opacity: locked ? 0.9 : 1, cursor: locked ? "default" : "pointer" }}>
+                    <div className="relative px-4 py-3 flex items-center justify-between" style={{ background: bannerBg, minHeight: 64 }}>
+                      <span className="text-[11px] font-black uppercase tracking-widest text-white/90">Session {s.sort}</span>
+                      <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide" style={{ background: "rgba(255,255,255,0.18)", color: "#fff" }}>
+                        {locked ? <Lock size={11} /> : done ? <CheckCircle2 size={11} /> : <Circle size={11} />}{status}
+                      </span>
+                    </div>
+                    <div className="p-4 flex-1 flex flex-col">
+                      <div className="font-extrabold leading-snug">{s.title}</div>
+                      <div className="mt-1 text-xs" style={{ color: C.muted }}>{locked ? "Opens after the live class" : (meta || "Recording & tasks inside")}</div>
+                      {!locked && <div className="mt-3 text-xs font-black flex items-center gap-1" style={{ color: col }}>Open <span className="transition-transform group-hover:translate-x-0.5">→</span></div>}
+                    </div>
                   </Tag>
                 );
               })}
