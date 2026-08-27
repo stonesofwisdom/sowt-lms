@@ -112,16 +112,22 @@ function TutorHome({ profile, pct, completed, total, next, setTab, onContinue })
   const first = String(profile.full_name || "there").split(" ")[0];
   return (
     <div className="fade-in space-y-4">
-      <div className="rounded-3xl p-7 md:p-8 flex flex-col sm:flex-row sm:items-center gap-6" style={{ background: C.card, border: `1px solid ${C.line}` }}>
-        <div className="flex-1">
-          <div className="text-[11px] font-bold uppercase tracking-widest" style={{ color: C.blue }}>Get Paid to Teach Online · Masterclass</div>
-          <h1 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight">Welcome back, {first} 👋</h1>
-          <p className="mt-2 text-sm max-w-lg" style={{ color: C.muted }}>{total} live sessions and a Certificate of Completion — all in one place.</p>
-          <button onClick={onContinue} className="btn mt-5 rounded-2xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.blue }}>Continue learning</button>
+      <div className="relative overflow-hidden rounded-3xl p-7 md:p-9 flex flex-col sm:flex-row sm:items-center gap-6" style={{ background: "linear-gradient(135deg, #0E1A3A 0%, #16265A 100%)" }}>
+        <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full" style={{ background: "rgba(255,206,0,0.10)" }} />
+        <div className="pointer-events-none absolute -left-10 -bottom-16 h-48 w-48 rounded-full" style={{ background: "rgba(99,102,241,0.18)" }} />
+        <div className="relative flex-1">
+          <div className="text-[11px] font-bold uppercase tracking-widest" style={{ color: C.yellow }}>Get Paid to Teach Online · Masterclass</div>
+          <h1 className="mt-2 text-3xl md:text-4xl font-extrabold tracking-tight text-white">Welcome back, <span style={{ color: C.yellow }}>{first}</span> 👋</h1>
+          <p className="mt-2 text-sm max-w-lg text-white/70">{total} live sessions and a Certificate of Completion — all in one place.</p>
+          <button onClick={onContinue} className="btn mt-5 rounded-2xl px-5 py-2.5 text-sm font-black" style={{ background: C.yellow, color: C.ink }}>Continue learning</button>
         </div>
-        <div className="shrink-0 self-start grid place-items-center rounded-3xl px-6 py-4" style={{ background: "#EEF0FE" }}>
-          <div className="text-3xl font-extrabold" style={{ color: C.blue }}>{pct}%</div>
-          <div className="mt-1 text-xs font-semibold" style={{ color: C.muted }}>{completed} of {total} done</div>
+        <div className="relative shrink-0 self-center grid place-items-center">
+          <svg width="112" height="112" viewBox="0 0 112 112">
+            <circle cx="56" cy="56" r="46" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="9" />
+            <circle cx="56" cy="56" r="46" fill="none" stroke={C.yellow} strokeWidth="9" strokeLinecap="round" strokeDasharray={2 * Math.PI * 46} strokeDashoffset={2 * Math.PI * 46 * (1 - (pct || 0) / 100)} transform="rotate(-90 56 56)" style={{ transition: "stroke-dashoffset .6s ease" }} />
+            <text x="56" y="52" textAnchor="middle" fontSize="26" fontWeight="800" fill="#fff">{pct}%</text>
+            <text x="56" y="72" textAnchor="middle" fontSize="11" fill="rgba(255,255,255,0.7)">{completed}/{total} done</text>
+          </svg>
         </div>
       </div>
       {next && (
@@ -330,7 +336,7 @@ function AssignmentBlock({ a, existing, onSubmit, uid }) {
         <div className="font-black text-sm">{a.title}</div>
         {submitted && <span className="ml-auto text-[11px] font-bold" style={{ color: C.blue }}>Submitted</span>}
       </div>
-      <p className="mt-2 text-sm whitespace-pre-wrap" style={{ color: C.muted }}>{a.prompt}</p>
+      <p className="mt-2 text-sm" style={{ color: C.muted }}>{a.prompt}</p>
       <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="Type your answer (optional if you attach a file)…" className="mt-2 w-full resize-none rounded-xl px-3 py-2 text-sm" style={{ background: C.card, border: `1px solid ${C.line}` }} />
 
       <input ref={inputRef} type="file" accept="image/*,application/pdf" onChange={pick} className="hidden" />
