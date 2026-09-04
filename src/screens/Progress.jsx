@@ -43,10 +43,11 @@ export default function Progress() {
       });
       const sessionsDone = perSession.filter((r) => r.done).length;
       const attended = perSession.filter((r) => r.present).length;
-      const writtenTotal = perSession.reduce((n, r) => n + r.written.length, 0);
-      const writtenDone = perSession.reduce((n, r) => n + r.written.filter((a) => subs.some((x) => x.assignment_id === a.id && x.user_id === p.id)).length, 0);
-      const quizzesTotal = perSession.filter((r) => !!r.quiz).length;
-      const quizzesPassed = perSession.filter((r) => r.quizPassed).length;
+      const openR = perSession.filter((r) => r.s.is_open);
+      const writtenTotal = openR.reduce((n, r) => n + (r.s.assignments_active ? r.written.length : 0), 0);
+      const writtenDone = openR.reduce((n, r) => n + (r.s.assignments_active ? r.written.filter((a) => subs.some((x) => x.assignment_id === a.id && x.user_id === p.id)).length : 0), 0);
+      const quizzesTotal = openR.filter((r) => r.quiz && (r.quiz.questions?.length > 0)).length;
+      const quizzesPassed = openR.filter((r) => r.quiz && (r.quiz.questions?.length > 0) && r.quizPassed).length;
       const days = daysSince(p.last_active);
       const behind = (sessionsDone < Math.max(0, sessions.length - 2)) && (days === null || days >= 4);
       return { p, perSession, sessionsDone, attended, writtenDone, writtenTotal, quizzesPassed, quizzesTotal, days, behind, total: sessions.length };
@@ -63,6 +64,13 @@ export default function Progress() {
 
   const shown = rows.filter((r) => (r.p.full_name || "").toLowerCase().includes(q.toLowerCase()) || (r.p.email || "").toLowerCase().includes(q.toLowerCase()));
   const behindCount = rows.filter((r) => r.behind).length;
+  const live = { a: 0, q: 0, sessions: 0 };
+  if (data) {
+    const openS = data.sessions.filter((s) => s.is_open);
+    live.sessions = openS.length;
+    live.a = openS.reduce((n, s) => n + (s.assignments_active ? (s.assignments?.length || 0) : 0), 0);
+    live.q = openS.filter((s) => { const z = data.quizzes.find((z) => z.session_id === s.id); return z && z.questions?.length > 0; }).length;
+  }
 
   return (
     <div className="fade-in">
@@ -72,6 +80,15 @@ export default function Progress() {
       </div>
       {view === "attendance" ? <AttendanceMarker data={data} /> : (<>
       <p className="mt-4 text-sm" style={{ color: C.muted }}>{rows.length} enrolled tutor{rows.length === 1 ? "" : "s"}. {behindCount > 0 ? `${behindCount} may need a nudge.` : "Everyone's tracking well."}</p>
+      <div className="mt-4 grid grid-cols-3 gap-3">
+        {[["Open sessions", live.sessions], ["Assignments given", live.a], ["Quizzes given", live.q]].map(([l, v]) => (
+          <div key={l} className="rounded-2xl p-4 text-center" style={{ background: C.card, border: `1px solid ${C.line}` }}>
+            <div className="text-2xl font-extrabold" style={{ color: C.blue }}>{v}</div>
+            <div className="text-[11px] font-bold uppercase tracking-wide mt-0.5" style={{ color: C.muted }}>{l}</div>
+          </div>
+        ))}
+      </div>
+      <p className="mt-2 text-xs" style={{ color: C.muted }}>Counts reflect released (open) sessions only — locked sessions aren't counted as given yet.</p>
 
       <div className="mt-6 relative"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" color={C.muted} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or email…" className="w-full rounded-2xl pl-9 pr-4 py-2.5 text-sm" style={{ background: C.card, border: `1px solid ${C.line}` }} /></div>
 
