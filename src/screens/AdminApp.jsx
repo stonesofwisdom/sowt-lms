@@ -434,7 +434,14 @@ function AdminSubmissions() {
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [q, setQ] = useState("");
-  async function load() { setSubs(await fetchAllSubs()); }
+  const [view, setView] = useState("assign");
+  const [attempts, setAttempts] = useState([]);
+  const [quizzes, setQuizzes] = useState([]);
+  const [people, setPeople] = useState([]);
+  async function load() {
+    const [sb, at, qz, pf] = await Promise.all([fetchAllSubs(), fetchAllAttempts(), fetchQuizzes(), fetchProfiles()]);
+    setSubs(sb); setAttempts(at); setQuizzes(qz); setPeople(pf);
+  }
   useEffect(() => { load(); }, []);
   const sub = subs?.find((x) => x.id === openId);
   async function suggest() {
@@ -493,11 +500,15 @@ function AdminSubmissions() {
   return (
     <div className="fade-in">
       <Header eyebrow="Review tutor work" title="Submissions" />
-      <div className="mt-6 flex items-center gap-2 rounded-2xl px-4 py-3" style={{ background: C.card, border: `1px solid ${C.line}` }}>
+      <div className="mt-4 inline-flex gap-1 rounded-2xl p-1" style={{ background: C.card, border: `1px solid ${C.line}` }}>
+        {[["assign", "Assignments"], ["quiz", "Quiz results"]].map(([id, l]) => <button key={id} onClick={() => setView(id)} className="rounded-xl px-4 py-2 text-sm font-bold" style={view === id ? { background: C.ink, color: "#fff" } : { color: C.muted }}>{l}</button>)}
+      </div>
+      <div className="mt-4 flex items-center gap-2 rounded-2xl px-4 py-3" style={{ background: C.card, border: `1px solid ${C.line}` }}>
         <Search size={16} color={C.muted} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by tutor or session…" className="flex-1 bg-transparent text-sm outline-none" />
       </div>
-      {shown.length === 0 && <div className="mt-4 rounded-3xl p-8 text-center text-sm" style={{ background: C.card, border: `1px solid ${C.line}`, color: C.muted }}>No submissions yet.</div>}
-      {groupNames.map((g) => (
+      {view === "quiz" && <QuizResults attempts={attempts} quizzes={quizzes} people={people} q={q} />}
+      {view === "assign" && shown.length === 0 && <div className="mt-4 rounded-3xl p-8 text-center text-sm" style={{ background: C.card, border: `1px solid ${C.line}`, color: C.muted }}>No submissions yet.</div>}
+      {view === "assign" && groupNames.map((g) => (
         <div key={g} className="mt-6">
           <div className="flex items-center gap-2 mb-2">
             <span className="text-sm font-black">{g}</span>
@@ -515,6 +526,65 @@ function AdminSubmissions() {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+
+function QuizResults({ attempts, quizzes, people, q }) {
+  const nameOf = (uid) => { const p = people.find((x) => x.id === uid); return p?.full_name || p?.email || "Unknown tutor"; };
+  const qCount = (quizId) => { const z = quizzes.find((x) => x.id === quizId); return z?.questions?.length || 0; };
+  const titleOf = (quizId) => { const z = quizzes.find((x) => x.id === quizId); return z?.title || "Quiz"; };
+  const passMarkOf = (quizId) => { const z = quizzes.find((x) => x.id === quizId); return z?.pass_mark || 70; };
+
+  // Build per (quiz,user): best score, tries, passed
+  const map = {};
+  attempts.forEach((a) => {
+    const key = a.quiz_id + ":" + a.user_id;
+    if (!map[key]) map[key] = { quiz_id: a.quiz_id, user_id: a.user_id, best: a.score, tries: 0, passed: false };
+    map[key].tries += 1;
+    if (a.score > map[key].best) map[key].best = a.score;
+    if (a.passed) map[key].passed = true;
+  });
+  let rows = Object.values(map);
+  if (q) rows = rows.filter((r) => nameOf(r.user_id).toLowerCase().includes(q.toLowerCase()) || titleOf(r.quiz_id).toLowerCase().includes(q.toLowerCase()));
+
+  // Group by quiz
+  const groups = {};
+  rows.forEach((r) => { (groups[r.quiz_id] = groups[r.quiz_id] || []).push(r); });
+  const quizIds = Object.keys(groups);
+
+  if (rows.length === 0) return <div className="mt-4 rounded-3xl p-8 text-center text-sm" style={{ background: C.card, border: `1px solid ${C.line}`, color: C.muted }}>No quiz attempts yet.</div>;
+
+  return (
+    <div>
+      {quizIds.map((qid) => {
+        const total = qCount(Number(qid));
+        const pm = passMarkOf(Number(qid));
+        return (
+          <div key={qid} className="mt-6">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-sm font-black">{titleOf(Number(qid))}</span>
+              <span className="text-[11px] font-bold rounded-full px-2 py-0.5" style={{ background: C.bg, color: C.muted }}>Pass {pm}%</span>
+            </div>
+            <div className="space-y-2">
+              {groups[qid].sort((a, b) => b.best - a.best).map((r) => {
+                const correct = total ? Math.round((r.best / 100) * total) : null;
+                return (
+                  <div key={r.user_id} className="w-full flex items-center gap-4 rounded-2xl p-4" style={{ background: C.card, border: `1px solid ${C.line}` }}>
+                    <span className="grid place-items-center h-10 w-10 shrink-0 rounded-full text-xs font-black text-white" style={{ background: C.blue }}>{nameOf(r.user_id).split(" ").map((y) => y[0]).slice(0, 2).join("")}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-bold truncate">{nameOf(r.user_id)}</span>
+                      <span className="block text-xs" style={{ color: C.muted }}>Best: {r.best}%{correct !== null ? ` (${correct}/${total})` : ""} · {r.tries} {r.tries === 1 ? "try" : "tries"}</span>
+                    </span>
+                    <span className="ml-1 text-[11px] font-bold rounded-full px-2.5 py-1 shrink-0" style={r.passed ? { background: "#E6F5EE", color: C.green } : { background: "#FDECEC", color: C.red }}>{r.passed ? "Passed" : "Not yet"}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
