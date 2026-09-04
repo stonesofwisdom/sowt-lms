@@ -366,7 +366,7 @@ function AssignmentBlock({ a, existing, onSubmit, uid }) {
         <div className="font-black text-sm">{a.title}</div>
         {submitted && <span className="ml-auto text-[11px] font-bold" style={{ color: C.blue }}>Submitted</span>}
       </div>
-      <p className="mt-2 text-sm" style={{ color: C.muted }}>{a.prompt}</p>
+      <p className="mt-2 text-sm whitespace-pre-wrap leading-relaxed" style={{ color: C.muted }}>{a.prompt}</p>
       <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="Type your answer (optional if you attach a file)…" className="mt-2 w-full resize-none rounded-xl px-3 py-2 text-sm" style={{ background: C.card, border: `1px solid ${C.line}` }} />
 
       <input ref={inputRef} type="file" accept="image/*,application/pdf" onChange={pick} className="hidden" />
