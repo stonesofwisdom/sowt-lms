@@ -102,7 +102,6 @@ export default function TutorApp({ profile, onSignOut }) {
         {tab === "resources" && <ResourcesView />}
         {tab === "certificate" && <Certificate profile={profile} total={sessions.length} completed={completed} attended={attended.length} />}
         {tab === "form" && <PreCourseForm done={formDone} onDone={finishForm} />}
-        {tab === "resources" && <ResourcesView />}
       </>)}
     </Shell>
   );
