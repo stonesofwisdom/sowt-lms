@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import Shell from "./Shell.jsx";
 import { Header, Loading, Spinner } from "../components/ui.jsx";
 import { C } from "../theme";
-import { fetchProfiles, updateProfile, fetchCourse, saveSession, addSession, deleteSession, addAssignment, saveAssignment, deleteAssignment, fetchAnnouncements, postAnnouncement, fetchFacilitators, setSort, fetchResources, addResource, saveResource, deleteResource, fetchQuizzes, addQuiz, saveQuiz, deleteQuiz, addQuizQuestion, saveQuizQuestion, deleteQuizQuestion, fetchAllSubmissions, fetchAllAttempts, fetchAllAttendance } from "../db";
+import { fetchProfiles, updateProfile, fetchCourse, saveSession, addSession, deleteSession, addAssignment, saveAssignment, deleteAssignment, fetchAnnouncements, postAnnouncement, fetchFacilitators, setSort, fetchResources, addResource, saveResource, deleteResource, fetchQuizzes, addQuiz, saveQuiz, deleteQuiz, addQuizQuestion, saveQuizQuestion, deleteQuizQuestion, fetchAllSubmissions, fetchAllAttempts, fetchAllAttendance, updateSubmission } from "../db";
 import { AnnouncementsList } from "./TutorApp.jsx";
 import Community from "./Community.jsx";
-import { Users, BookOpen, Megaphone, Check, X, Plus, Trash2, Lock, Unlock, Search, ChevronUp, ChevronDown, FolderOpen } from "lucide-react";
+import { ai, feedbackPrompt } from "../ai";
+import { Users, BookOpen, Megaphone, Check, X, Plus, Trash2, Lock, Unlock, Search, ChevronUp, ChevronDown, FolderOpen, ClipboardCheck, FileText, ArrowLeft, Sparkles } from "lucide-react";
 
 export default function AdminApp({ profile, onSignOut }) {
   const [tab, setTab] = useState("members");
@@ -13,6 +14,7 @@ export default function AdminApp({ profile, onSignOut }) {
     { id: "members", label: "Members", icon: Users },
     { id: "content", label: "Course content", icon: BookOpen },
     { id: "resources", label: "Resources", icon: FolderOpen },
+    { id: "subs", label: "Submissions", icon: ClipboardCheck },
     { id: "announcements", label: "Community", icon: Megaphone },
   ];
   return (
@@ -22,6 +24,7 @@ export default function AdminApp({ profile, onSignOut }) {
       {tab === "content" && <Content />}
       {tab === "resources" && <AdminResources />}
       {tab === "resources" && <AdminResources />}
+      {tab === "subs" && <AdminSubmissions />}
       {tab === "announcements" && <Community profile={profile} canAnnounce={true} />}
     </Shell>
   );
@@ -419,6 +422,83 @@ function Detail({ row, onBack }) {
           <button onClick={copy} className="btn inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-bold text-white" style={{ background: C.ink }}><Copy size={14} color={C.yellow} /> {copied ? "Copied!" : "Copy message"}</button>
           {p.whatsapp_number && <a href={`https://wa.me/${p.whatsapp_number.replace(/[^0-9]/g, "")}`} target="_blank" rel="noreferrer" className="btn inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-bold text-white" style={{ background: C.green }}>Open WhatsApp</a>}
         </div>
+      </div>
+    </div>
+  );
+}
+
+
+function AdminSubmissions() {
+  const [subs, setSubs] = useState(null);
+  const [openId, setOpenId] = useState(null);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [q, setQ] = useState("");
+  async function load() { setSubs(await fetchAllSubmissions()); }
+  useEffect(() => { load(); }, []);
+  const sub = subs?.find((x) => x.id === openId);
+  async function suggest() {
+    if (!sub || busy) return; setBusy(true);
+    const fb = await ai(feedbackPrompt(sub.assignments?.title || "", sub.assignments?.prompt || "", sub.content || ""));
+    setDraft(fb); setBusy(false);
+  }
+  async function send() {
+    await updateSubmission(sub.id, { feedback: draft, status: "reviewed" });
+    setOpenId(null); setDraft(""); load();
+  }
+  if (!subs) return <Loading />;
+  if (sub) {
+    const isImg = /\.(png|jpe?g|gif|webp)$/i.test(sub.file_name || sub.file_url || "");
+    return (
+      <div className="fade-in">
+        <button onClick={() => { setOpenId(null); setDraft(""); }} className="inline-flex items-center gap-1.5 text-sm font-bold" style={{ color: C.muted }}><ArrowLeft size={16} /> All submissions</button>
+        <div className="mt-3 text-xs font-bold uppercase tracking-widest" style={{ color: C.red }}>{sub.assignments?.sessions?.title}</div>
+        <h1 className="mt-1 text-2xl font-extrabold tracking-tight">{sub.profiles?.full_name || sub.profiles?.email}</h1>
+        <div className="mt-4 rounded-3xl p-5" style={{ background: C.card, border: `1px solid ${C.line}` }}>
+          <div className="text-xs font-bold uppercase" style={{ color: C.muted }}>{sub.assignments?.title}</div>
+          <p className="mt-1 text-sm" style={{ color: C.muted }}>{sub.assignments?.prompt}</p>
+          {sub.content && <div className="mt-3 rounded-2xl p-4 text-sm leading-relaxed" style={{ background: C.bg, border: `1px solid ${C.line}` }}>{sub.content}</div>}
+          {sub.file_url && (
+            <div className="mt-3">
+              <div className="text-xs font-bold uppercase mb-1" style={{ color: C.muted }}>Attached file</div>
+              {isImg
+                ? <a href={sub.file_url} target="_blank" rel="noreferrer"><img src={sub.file_url} alt={sub.file_name || "submission"} className="rounded-2xl max-h-96 w-auto" style={{ border: `1px solid ${C.line}` }} /></a>
+                : <a href={sub.file_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold" style={{ background: C.bg, border: `1px solid ${C.line}`, color: C.blue }}><FileText size={16} color={C.red} /> {sub.file_name || "Open PDF"}</a>}
+            </div>
+          )}
+        </div>
+        <div className="mt-4 rounded-3xl p-5" style={{ background: C.card, border: `1px solid ${C.line}` }}>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="text-xs font-bold uppercase" style={{ color: C.red }}>Feedback</div>
+            <button onClick={suggest} disabled={busy} className="btn inline-flex items-center gap-1.5 rounded-2xl px-3 py-1.5 text-xs font-bold text-white" style={{ background: C.ink }}>{busy ? <Spinner light /> : <Sparkles size={14} color={C.yellow} />} Suggest with AI</button>
+          </div>
+          <textarea rows={5} value={draft || sub.feedback || ""} onChange={(e) => setDraft(e.target.value)} placeholder="Write feedback, or let AI draft it." className="mt-3 w-full resize-none rounded-2xl px-4 py-3 text-sm" style={{ background: C.bg, border: `1px solid ${C.line}` }} />
+          <button onClick={send} className="btn mt-3 inline-flex items-center gap-2 rounded-2xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.green }}><Check size={16} /> Send feedback & mark reviewed</button>
+        </div>
+      </div>
+    );
+  }
+  const shown = subs.filter((x) => {
+    const n = (x.profiles?.full_name || x.profiles?.email || "").toLowerCase();
+    const t = (x.assignments?.sessions?.title || "").toLowerCase();
+    return n.includes(q.toLowerCase()) || t.includes(q.toLowerCase());
+  });
+  return (
+    <div className="fade-in">
+      <Header eyebrow="Review tutor work" title="Submissions" />
+      <div className="mt-6 flex items-center gap-2 rounded-2xl px-4 py-3" style={{ background: C.card, border: `1px solid ${C.line}` }}>
+        <Search size={16} color={C.muted} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by tutor or session…" className="flex-1 bg-transparent text-sm outline-none" />
+      </div>
+      <div className="mt-4 space-y-3">
+        {shown.length === 0 && <div className="rounded-3xl p-8 text-center text-sm" style={{ background: C.card, border: `1px solid ${C.line}`, color: C.muted }}>No submissions yet.</div>}
+        {shown.map((x) => { const isNew = x.status !== "reviewed"; return (
+          <button key={x.id} onClick={() => { setOpenId(x.id); setDraft(x.feedback || ""); }} className="lift w-full flex items-center gap-4 rounded-2xl p-4 text-left" style={{ background: C.card, border: `1px solid ${C.line}` }}>
+            <span className="grid place-items-center h-10 w-10 shrink-0 rounded-full text-xs font-black text-white" style={{ background: C.blue }}>{(x.profiles?.full_name || x.profiles?.email || "T").split(" ").map((y) => y[0]).slice(0, 2).join("")}</span>
+            <span className="min-w-0 flex-1"><span className="block font-bold truncate">{x.profiles?.full_name || x.profiles?.email}</span><span className="block text-xs truncate" style={{ color: C.muted }}>{x.assignments?.sessions?.title} · {x.assignments?.title}</span></span>
+            {x.file_url && <FileText size={15} color={C.muted} className="shrink-0" />}
+            <span className="ml-1 text-[11px] font-bold rounded-full px-2.5 py-1 shrink-0" style={isNew ? { background: "#FDECEC", color: C.red } : { background: "#E6F5EE", color: C.green }}>{isNew ? "New" : "Reviewed"}</span>
+          </button>
+        ); })}
       </div>
     </div>
   );
