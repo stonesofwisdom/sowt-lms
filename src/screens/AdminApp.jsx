@@ -23,7 +23,6 @@ export default function AdminApp({ profile, onSignOut }) {
       {tab === "progress" && <Progress />}
       {tab === "content" && <Content />}
       {tab === "resources" && <AdminResources />}
-      {tab === "resources" && <AdminResources />}
       {tab === "subs" && <AdminSubmissions />}
       {tab === "announcements" && <Community profile={profile} canAnnounce={true} />}
     </Shell>
