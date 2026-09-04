@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import Shell from "./Shell.jsx";
 import { Header, Loading, Spinner } from "../components/ui.jsx";
 import { C } from "../theme";
-import { fetchProfiles, updateProfile, fetchCourse, saveSession, addSession, deleteSession, addAssignment, saveAssignment, deleteAssignment, fetchAnnouncements, postAnnouncement, fetchFacilitators, setSort, fetchResources, addResource, saveResource, deleteResource, fetchQuizzes, addQuiz, saveQuiz, deleteQuiz, addQuizQuestion, saveQuizQuestion, deleteQuizQuestion, fetchAllSubmissions, fetchAllAttempts, fetchAllAttendance, updateSubmission } from "../db";
+import { fetchProfiles, updateProfile, fetchCourse, saveSession, addSession, deleteSession, addAssignment, saveAssignment, deleteAssignment, fetchAnnouncements, postAnnouncement, fetchFacilitators, setSort, fetchResources, addResource, saveResource, deleteResource, fetchQuizzes, addQuiz, saveQuiz, deleteQuiz, addQuizQuestion, saveQuizQuestion, deleteQuizQuestion, fetchAllSubmissions, fetchAllAttempts, fetchAllAttendance, updateSubmission, fetchAllSubs } from "../db";
 import { AnnouncementsList } from "./TutorApp.jsx";
 import Community from "./Community.jsx";
 import { ai, feedbackPrompt } from "../ai";
@@ -434,7 +434,7 @@ function AdminSubmissions() {
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [q, setQ] = useState("");
-  async function load() { setSubs(await fetchAllSubmissions()); }
+  async function load() { setSubs(await fetchAllSubs()); }
   useEffect(() => { load(); }, []);
   const sub = subs?.find((x) => x.id === openId);
   async function suggest() {
@@ -483,23 +483,38 @@ function AdminSubmissions() {
     const t = (x.assignments?.sessions?.title || "").toLowerCase();
     return n.includes(q.toLowerCase()) || t.includes(q.toLowerCase());
   });
+  // Group by session title
+  const groups = {};
+  shown.forEach((x) => {
+    const key = x.assignments?.sessions?.title || "Other";
+    (groups[key] = groups[key] || []).push(x);
+  });
+  const groupNames = Object.keys(groups);
   return (
     <div className="fade-in">
       <Header eyebrow="Review tutor work" title="Submissions" />
       <div className="mt-6 flex items-center gap-2 rounded-2xl px-4 py-3" style={{ background: C.card, border: `1px solid ${C.line}` }}>
         <Search size={16} color={C.muted} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by tutor or session…" className="flex-1 bg-transparent text-sm outline-none" />
       </div>
-      <div className="mt-4 space-y-3">
-        {shown.length === 0 && <div className="rounded-3xl p-8 text-center text-sm" style={{ background: C.card, border: `1px solid ${C.line}`, color: C.muted }}>No submissions yet.</div>}
-        {shown.map((x) => { const isNew = x.status !== "reviewed"; return (
-          <button key={x.id} onClick={() => { setOpenId(x.id); setDraft(x.feedback || ""); }} className="lift w-full flex items-center gap-4 rounded-2xl p-4 text-left" style={{ background: C.card, border: `1px solid ${C.line}` }}>
-            <span className="grid place-items-center h-10 w-10 shrink-0 rounded-full text-xs font-black text-white" style={{ background: C.blue }}>{(x.profiles?.full_name || x.profiles?.email || "T").split(" ").map((y) => y[0]).slice(0, 2).join("")}</span>
-            <span className="min-w-0 flex-1"><span className="block font-bold truncate">{x.profiles?.full_name || x.profiles?.email}</span><span className="block text-xs truncate" style={{ color: C.muted }}>{x.assignments?.sessions?.title} · {x.assignments?.title}</span></span>
-            {x.file_url && <FileText size={15} color={C.muted} className="shrink-0" />}
-            <span className="ml-1 text-[11px] font-bold rounded-full px-2.5 py-1 shrink-0" style={isNew ? { background: "#FDECEC", color: C.red } : { background: "#E6F5EE", color: C.green }}>{isNew ? "New" : "Reviewed"}</span>
-          </button>
-        ); })}
-      </div>
+      {shown.length === 0 && <div className="mt-4 rounded-3xl p-8 text-center text-sm" style={{ background: C.card, border: `1px solid ${C.line}`, color: C.muted }}>No submissions yet.</div>}
+      {groupNames.map((g) => (
+        <div key={g} className="mt-6">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-sm font-black">{g}</span>
+            <span className="text-[11px] font-bold rounded-full px-2 py-0.5" style={{ background: C.bg, color: C.muted }}>{groups[g].length}</span>
+          </div>
+          <div className="space-y-2">
+            {groups[g].map((x) => { const isNew = x.status !== "reviewed"; return (
+              <button key={x.id} onClick={() => { setOpenId(x.id); setDraft(x.feedback || ""); }} className="lift w-full flex items-center gap-4 rounded-2xl p-4 text-left" style={{ background: C.card, border: `1px solid ${C.line}` }}>
+                <span className="grid place-items-center h-10 w-10 shrink-0 rounded-full text-xs font-black text-white" style={{ background: C.blue }}>{(x.profiles?.full_name || x.profiles?.email || "T").split(" ").map((y) => y[0]).slice(0, 2).join("")}</span>
+                <span className="min-w-0 flex-1"><span className="block font-bold truncate">{x.profiles?.full_name || x.profiles?.email || "Unknown tutor"}</span><span className="block text-xs truncate" style={{ color: C.muted }}>{x.assignments?.title || "Assignment"}</span></span>
+                {x.file_url && <FileText size={15} color={C.muted} className="shrink-0" />}
+                <span className="ml-1 text-[11px] font-bold rounded-full px-2.5 py-1 shrink-0" style={isNew ? { background: "#FDECEC", color: C.red } : { background: "#E6F5EE", color: C.green }}>{isNew ? "New" : "Reviewed"}</span>
+              </button>
+            ); })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
