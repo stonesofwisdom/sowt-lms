@@ -8,10 +8,11 @@ import Community from "./Community.jsx";
 import Schedule from "./Schedule.jsx";
 import AIStudio from "./AIStudio.jsx";
 import Certificate from "./Certificate.jsx";
+import ProfileEditor from "./ProfileEditor.jsx";
 import PreCourseForm from "./PreCourseForm.jsx";
 import ResourcesView from "./ResourcesView.jsx";
 import { ai, feedbackPrompt } from "../ai";
-import { Home as HomeIcon, BookOpen, ClipboardCheck, MessageSquare, Play, Lock, Sparkles, ArrowLeft, Megaphone, Check, CheckCircle2, Circle, Target, Calendar, Bot, Award, FileText, FolderOpen, ListChecks, Paperclip, X, Image as ImageIcon } from "lucide-react";
+import { Home as HomeIcon, BookOpen, ClipboardCheck, MessageSquare, Play, Lock, Sparkles, ArrowLeft, Megaphone, Check, CheckCircle2, Circle, Target, Calendar, Bot, Award, FileText, FolderOpen, ListChecks, Paperclip, X, Image as ImageIcon, UserCircle } from "lucide-react";
 
 export default function TutorApp({ profile, onSignOut }) {
   const [formDone, setFormDone] = useState(!!profile.form_done);
@@ -78,6 +79,7 @@ export default function TutorApp({ profile, onSignOut }) {
     { id: "community", label: "Community", icon: MessageSquare },
     { id: "resources", label: "Resources", icon: FolderOpen },
     { id: "certificate", label: "Certificate", icon: Award },
+    { id: "profile", label: "My Profile", icon: UserCircle },
   ];
   function markSeen(t) { if (t === "community" && latestAnn) localStorage.setItem("seenAnn_" + profile.id, latestAnn); if (t === "resources" && latestRes) localStorage.setItem("seenRes_" + profile.id, latestRes); }
 
@@ -101,6 +103,7 @@ export default function TutorApp({ profile, onSignOut }) {
         {tab === "community" && <Community profile={profile} canAnnounce={false} />}
         {tab === "resources" && <ResourcesView />}
         {tab === "certificate" && <Certificate profile={profile} total={sessions.length} completed={completed} attended={attended.length} />}
+        {tab === "profile" && <ProfileEditor profile={profile} />}
         {tab === "form" && <PreCourseForm done={formDone} onDone={finishForm} />}
       </>)}
     </Shell>
