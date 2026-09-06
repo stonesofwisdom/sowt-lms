@@ -4,6 +4,16 @@ import { C } from "../theme";
 import { updateProfile, uploadAvatar } from "../db";
 import { Check, ExternalLink, Copy, Globe, Lock, Camera, ChevronDown, ChevronUp } from "lucide-react";
 
+function Field({ label, hint, children }) {
+  return (
+    <div>
+      <label className="text-xs font-bold uppercase tracking-wide" style={{ color: C.muted }}>{label}</label>
+      {children}
+      {hint && <div className="mt-1 text-xs" style={{ color: C.muted }}>{hint}</div>}
+    </div>
+  );
+}
+
 export default function ProfileEditor({ profile }) {
   const [photo, setPhoto] = useState(profile.profile_photo || "");
   const [tagline, setTagline] = useState(profile.profile_tagline || "");
@@ -53,19 +63,11 @@ export default function ProfileEditor({ profile }) {
         profile_location: location.trim(), profile_video: video.trim(),
         profile_contact: contact.trim(), profile_public: isPublic,
       });
-      setSaved(true); setTimeout(() => setSaved(false), 2000);
-    } catch (e) { alert(e.message); }
+      setSaved(true); setErr(""); setTimeout(() => setSaved(false), 2500);
+    } catch (e) { setErr("Could not save: " + (e.message || "unknown error")); }
     setBusy(false);
   }
   function copyLink() { navigator.clipboard.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 1500); }
-
-  const Field = ({ label, hint, children }) => (
-    <div>
-      <label className="text-xs font-bold uppercase tracking-wide" style={{ color: C.muted }}>{label}</label>
-      {children}
-      {hint && <div className="mt-1 text-xs" style={{ color: C.muted }}>{hint}</div>}
-    </div>
-  );
 
   return (
     <div className="fade-in">
