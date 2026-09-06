@@ -6,7 +6,8 @@ import { fetchProfiles, updateProfile, fetchCourse, saveSession, addSession, del
 import { AnnouncementsList } from "./TutorApp.jsx";
 import Community from "./Community.jsx";
 import { ai, feedbackPrompt } from "../ai";
-import { Users, BookOpen, Megaphone, Check, X, Plus, Trash2, Lock, Unlock, Search, ChevronUp, ChevronDown, FolderOpen, ClipboardCheck, FileText, ArrowLeft, Sparkles } from "lucide-react";
+import { supabase } from "../supabase";
+import { Users, BookOpen, Megaphone, Check, X, Plus, Trash2, Lock, Unlock, Search, ChevronUp, ChevronDown, FolderOpen, ClipboardCheck, FileText, ArrowLeft, Sparkles, Eye } from "lucide-react";
 
 export default function AdminApp({ profile, onSignOut }) {
   const [tab, setTab] = useState("members");
@@ -30,6 +31,7 @@ export default function AdminApp({ profile, onSignOut }) {
 }
 
 function Members() {
+  const [previewId, setPreviewId] = useState(null);
   const [rows, setRows] = useState(null);
   const [q, setQ] = useState("");
   async function load() { setRows(await fetchProfiles()); }
@@ -64,11 +66,13 @@ function Members() {
                 <option value="approved">Approved</option>
                 <option value="restricted">Restricted</option>
               </select>
+              <button onClick={() => setPreviewId(r.id)} className="btn inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold" style={{ background: C.bg, color: C.blue, border: `1px solid ${C.line}` }} title="Preview this tutor's profile"><Eye size={13} /> View</button>
             </div>
           </div>
         ))}
         {shown.length === 0 && <div className="px-5 py-8 text-center text-sm" style={{ color: C.muted }}>No members yet.</div>}
       </div>
+      {previewId && <ProfilePreview pid={previewId} onClose={() => setPreviewId(null)} />}
     </div>
   );
 }
@@ -434,6 +438,61 @@ function Detail({ row, onBack }) {
   );
 }
 
+
+function ProfilePreview({ pid, onClose }) {
+  const [p, setP] = useState(undefined);
+  useEffect(() => {
+    (async () => {
+      try { const { data, error } = await supabase.rpc("admin_tutor_profile", { pid }); if (error) throw error; setP(data && data[0] ? data[0] : null); }
+      catch (e) { setP(null); }
+    })();
+  }, [pid]);
+  const initials = (p?.name || "T").split(" ").map((x) => x[0]).slice(0, 2).join("");
+  const statusText = !p ? "" : (p.admin_status === "restricted" ? "Restricted — never public"
+    : p.admin_status === "approved" ? "Approved — public when their toggle is on"
+    : (p.certified ? "Auto — certified, public when their toggle is on" : "Auto — not yet certified, so not public"));
+  const liveNow = p && p.is_public && p.admin_status !== "restricted" && (p.admin_status === "approved" || p.certified);
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4" style={{ background: "rgba(0,0,0,.5)" }} onClick={onClose}>
+      <div className="w-full max-w-lg my-8 rounded-3xl overflow-hidden" style={{ background: C.card }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: `1px solid ${C.line}` }}>
+          <div className="text-sm font-black">Profile preview</div>
+          <button onClick={onClose} className="btn rounded-xl p-1.5" style={{ background: C.bg }}><X size={16} /></button>
+        </div>
+        {p === undefined && <div className="p-8"><Loading /></div>}
+        {p === null && <div className="p-8 text-center text-sm" style={{ color: C.muted }}>Could not load this profile.</div>}
+        {p && (
+          <div>
+            <div className="px-5 py-3 text-xs font-bold" style={{ background: liveNow ? "#E6F5EE" : "#FDECEC", color: liveNow ? C.green : C.red }}>
+              {liveNow ? "LIVE publicly right now" : "NOT public right now"} · {statusText} · Their toggle: {p.is_public ? "public" : "private"}
+            </div>
+            <div className="p-6 text-center text-white" style={{ background: "linear-gradient(135deg, #0E1A3A 0%, #16265A 100%)" }}>
+              <div className="mx-auto h-24 w-24 rounded-full overflow-hidden grid place-items-center" style={{ background: "rgba(255,255,255,.18)", border: "3px solid rgba(255,255,255,.35)" }}>
+                {p.photo ? <img src={p.photo} alt={p.name} className="h-full w-full object-cover" /> : <span className="text-2xl font-black">{initials}</span>}
+              </div>
+              <div className="mt-3 text-xl font-extrabold">{p.name}</div>
+              {p.tagline && <div className="mt-1 text-sm text-white/80">{p.tagline}</div>}
+              {p.certified && <div className="mt-2 inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-black" style={{ background: C.yellow, color: C.ink }}>SOWT Certified</div>}
+            </div>
+            <div className="p-5 space-y-4 text-sm">
+              {p.bio && <p className="leading-relaxed">{p.bio}</p>}
+              {p.proof && <div className="rounded-2xl p-3" style={{ background: "#FFF9DC", border: `1px solid ${C.yellow}` }}><div className="text-[10px] font-black uppercase" style={{ color: C.red }}>Results</div><div className="mt-1 font-semibold">{p.proof}</div></div>}
+              {p.subjects && <div><span className="text-[10px] font-black uppercase" style={{ color: C.muted }}>Subjects</span><div className="font-semibold">{p.subjects}</div></div>}
+              {p.quals && <div><span className="text-[10px] font-black uppercase" style={{ color: C.muted }}>Qualifications</span><div className="font-semibold">{p.quals}</div></div>}
+              {p.experience && <div><span className="text-[10px] font-black uppercase" style={{ color: C.muted }}>Experience</span><div className="font-semibold">{p.experience}</div></div>}
+              {p.availability && <div><span className="text-[10px] font-black uppercase" style={{ color: C.muted }}>Availability</span><div className="font-semibold">{p.availability}</div></div>}
+              {p.location && <div><span className="text-[10px] font-black uppercase" style={{ color: C.muted }}>Location</span><div className="font-semibold">{p.location}</div></div>}
+              {p.video && <a href={p.video} target="_blank" rel="noreferrer" className="block font-bold" style={{ color: C.blue }}>Intro video link →</a>}
+              {p.getstarted && <div className="rounded-2xl p-3" style={{ background: "#EEF0FE" }}><div className="text-[10px] font-black uppercase" style={{ color: C.blue }}>How to get started</div><div className="mt-1 font-semibold">{p.getstarted}</div></div>}
+              {p.contact && <div><span className="text-[10px] font-black uppercase" style={{ color: C.muted }}>WhatsApp</span><div className="font-semibold">{p.contact}</div></div>}
+              {!p.bio && !p.tagline && !p.proof && <div className="text-center py-4" style={{ color: C.muted }}>This tutor hasn't filled in their profile yet.</div>}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function AdminSubmissions() {
   const [subs, setSubs] = useState(null);
