@@ -57,6 +57,14 @@ function Members() {
               ? <button onClick={() => set(r.id, { status: "revoked" })} className="btn inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold" style={{ background: C.card, border: `1px solid ${C.line}` }}><X size={13} /> Revoke</button>
               : <button onClick={() => set(r.id, { status: "enrolled" })} className="btn inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold text-white" style={{ background: C.green }}><Check size={13} /> Enrol</button>}
             <button onClick={() => set(r.id, { certificate_unlocked: !r.certificate_unlocked })} className="btn inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold" style={r.certificate_unlocked ? { background: "#E6F5EE", color: C.green } : { background: C.bg, color: C.muted, border: `1px solid ${C.line}` }}>{r.certificate_unlocked ? "Cert unlocked" : "Unlock cert"}</button>
+            <div className="inline-flex items-center gap-1.5">
+              <span className="text-[10px] font-bold uppercase" style={{ color: C.muted }}>Profile</span>
+              <select value={r.profile_admin_status || "auto"} onChange={(e) => set(r.id, { profile_admin_status: e.target.value })} className="rounded-xl px-2 py-1.5 text-xs font-bold" style={{ background: C.bg, border: `1px solid ${C.line}` }} title="Auto = public once certified. Approved = force public. Restricted = never public.">
+                <option value="auto">Auto (after cert)</option>
+                <option value="approved">Approved</option>
+                <option value="restricted">Restricted</option>
+              </select>
+            </div>
           </div>
         ))}
         {shown.length === 0 && <div className="px-5 py-8 text-center text-sm" style={{ color: C.muted }}>No members yet.</div>}
