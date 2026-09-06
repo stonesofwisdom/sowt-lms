@@ -32,6 +32,15 @@ export async function uploadSubmissionFile(user_id, assignment_id, file) {
   const { data } = supabase.storage.from("submissions").getPublicUrl(path);
   return { url: data.publicUrl, name: file.name };
 }
+
+export async function uploadAvatar(user_id, file) {
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+  const path = `${user_id}/portrait-${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type || undefined });
+  if (error) throw error;
+  const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+  return data.publicUrl;
+}
 export async function fetchAnnouncements() {
   const { data } = await supabase.from("announcements").select("*").order("created_at", { ascending: false });
   return data || [];
